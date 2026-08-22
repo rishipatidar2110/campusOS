@@ -1170,6 +1170,7 @@ async function loadFromSupabase(){
       await uploadSeedToSupabase();
     } else {
       Object.keys(data.data).forEach(k => { DB[k] = data.data[k]; });
+      ensurePlacementDrivesIds();
       saveLocalCache();
       updateCloudStatusBadge('connected', 'Cloud Synced');
     }
@@ -1219,6 +1220,7 @@ function restoreLocalCache(){
       if(saved && typeof saved === 'object'){ Object.keys(saved).forEach(k => { DB[k] = saved[k]; }); }
     }
   } catch(e){}
+  ensurePlacementDrivesIds();
 }
 
 function openSupabaseConfigModal(){
@@ -1259,10 +1261,10 @@ async function saveAndConnectSupabase(){
    3. UNIVERSITY SEEDED DATABASE & STATE
    ========================================================================= */
 const INITIAL_COURSES = [
-  {code:'CSE2001', key:'ds', name:'Data Structures & Algorithms', credits:4, theorySlot:'SLOT A', labSlot:'SLOT A+TA', sem:3, dept:'Computer Science & Engineering', teacherId:'EMP101', type:'Theory & Lab Practical', desc:'Advanced trees, graphs, dynamic programming, algorithmic complexity analysis, and real-time data structures.'},
-  {code:'ECE2004', key:'de', name:'Digital Electronics & VLSI',   credits:4, theorySlot:'SLOT B', labSlot:'SLOT B+TB', sem:3, dept:'Computer Science & Engineering', teacherId:'EMP102', type:'Theory & Lab Practical', desc:'CMOS logic design, sequential circuit analysis, Verilog HDL modeling, and FPGA hardware synthesis.'},
-  {code:'MAT2002', key:'dm', name:'Discrete Mathematics & Graph', credits:3, theorySlot:'SLOT C', labSlot:'SLOT C+TC', sem:3, dept:'Computer Science & Engineering', teacherId:'EMP103', type:'Theory & Tutorial',      desc:'Set theory, mathematical logic, combinatorics, graph theory algorithms, and cryptographic proofs.'},
-  {code:'CSE2005', key:'cn', name:'Computer Networks & Security', credits:4, theorySlot:'SLOT D', labSlot:'SLOT D+TD', sem:3, dept:'Computer Science & Engineering', teacherId:'EMP104', type:'Theory & Lab Practical', desc:'OSI model, TCP/IP socket architectures, high-speed routing protocols, firewall design, and network cryptography.'},
+  {code:'CSE2001', key:'ds', name:'Data Structures & Algorithms', credits:4, sem:3, dept:'Computer Science & Engineering', teacherId:'EMP101', type:'Theory & Lab Practical', desc:'Advanced trees, graphs, dynamic programming, algorithmic complexity analysis, and real-time data structures.'},
+  {code:'ECE2004', key:'de', name:'Digital Electronics & VLSI',   credits:4, sem:3, dept:'Computer Science & Engineering', teacherId:'EMP102', type:'Theory & Lab Practical', desc:'CMOS logic design, sequential circuit analysis, Verilog HDL modeling, and FPGA hardware synthesis.'},
+  {code:'MAT2002', key:'dm', name:'Discrete Mathematics & Graph', credits:3, sem:3, dept:'Computer Science & Engineering', teacherId:'EMP103', type:'Theory & Tutorial',      desc:'Set theory, mathematical logic, combinatorics, graph theory algorithms, and cryptographic proofs.'},
+  {code:'CSE2005', key:'cn', name:'Computer Networks & Security', credits:4, sem:3, dept:'Computer Science & Engineering', teacherId:'EMP104', type:'Theory & Lab Practical', desc:'OSI model, TCP/IP socket architectures, high-speed routing protocols, firewall design, and network cryptography.'},
 ];
 
 let SUBJECTS = INITIAL_COURSES;
@@ -1275,6 +1277,7 @@ function getSubjects(){
 }
 
 const STUDENT_NAMES = ['Aarav Sharma','Diya Patel','Kabir Singh','Ishita Verma','Rohan Gupta','Sanya Kapoor','Vivaan Reddy','Ananya Iyer','Aditya Menon','Priya Nair'];
+const STUDENT_GENDERS = ['male','female','male','female','male','female','male','female','male','female'];
 const ATT_SEED = [[46,41,38,44],[48,45,47,49],[30,28,33,31],[42,44,40,43],[36,34,32,35],[47,46,48,45],[40,38,41,39],[44,45,43,46],[33,35,31,34],[45,43,44,42]];
 const MARKS_SEED = [[88,75,91,82],[95,90,93,97],[58,62,55,60],[80,84,78,86],[65,70,60,68],[92,89,94,90],[77,73,80,75],[85,88,83,90],[63,60,58,65],[89,86,91,84]];
 
@@ -1283,16 +1286,16 @@ const HOSTEL_BLOCKS = [
   "Women's Residential Hostel (G-Block)",
   "Men's Residential Hostel (B-Block)",
   "Women's Residential Hostel (G-Block)",
-  "Men's Residential Hostel (A-Block)",
+  "Men's Residential Hostel (B-Block)",
   "Women's Residential Hostel (G-Block)",
   "Men's Residential Hostel (B-Block)",
-  "Women's Residential Hostel (F-Block)",
-  "Men's Residential Hostel (A-Block)",
+  "Women's Residential Hostel (G-Block)",
+  "Men's Residential Hostel (B-Block)",
   "Women's Residential Hostel (G-Block)"
 ];
 const HOSTEL_ROOMS = [
-  "Room B-304", "Room G-208", "Room B-112", "Room G-315", "Room A-402",
-  "Room G-104", "Room B-205", "Room F-302", "Room A-219", "Room G-411"
+  "Room B-304", "Room G-208", "Room B-112", "Room G-315", "Room B-402",
+  "Room G-104", "Room B-205", "Room G-302", "Room B-219", "Room G-411"
 ];
 const FATHER_NAMES = ['Mr. Rajesh Sharma','Mr. Dinesh Patel','Mr. Vikramaditya Singh','Mr. Sanjay Verma','Mr. Manoj Gupta','Mr. Ramesh Kapoor','Mr. Naveen Reddy','Mr. Venkat Iyer','Mr. Harish Menon','Mr. Krishnan Nair'];
 const MOTHER_NAMES = ['Mrs. Sunita Sharma','Mrs. Geeta Patel','Mrs. Kavita Singh','Mrs. Rekha Verma','Mrs. Pooja Gupta','Mrs. Shashi Kapoor','Mrs. Lakshmi Reddy','Mrs. Radha Iyer','Mrs. Sujata Menon','Mrs. Meenakshi Nair'];
@@ -1614,14 +1617,12 @@ function seedDatabase(){
         theory: {
           present: thPres,
           total: thTot,
-          last10: thLast10,
-          slot: s.theorySlot || 'A'
+          last10: thLast10
         },
         lab: {
           present: lbPres,
           total: lbTot,
-          last10: lbLast10,
-          slot: s.labSlot || (s.theorySlot ? s.theorySlot+'+T'+s.theorySlot : 'A+TA')
+          last10: lbLast10
         }
       };
       const total = MARKS_SEED[i][si] || 80;
@@ -1630,6 +1631,7 @@ function seedDatabase(){
     });
     return {
       id, name, password:'Stud'+(1001+i), role:'student',
+      gender: STUDENT_GENDERS[i],
       phone: '+91 98401 ' + (10010 + i),
       dept:'Computer Science & Engineering', sem:3, section: i<5?'A':'B',
       hostel: HOSTEL_BLOCKS[i],
@@ -1692,36 +1694,81 @@ function seedDatabase(){
   ];
 
   DB.teachers = TFACULTY.map(t => {
-    const c = INITIAL_COURSES.find(s=>s.key===t.subj) || {name:'Computer Science', code:'CSE2001', theorySlot:'A', labSlot:'A+TA'};
+    const c = INITIAL_COURSES.find(s=>s.key===t.subj) || {name:'Computer Science', code:'CSE2001'};
     return {
       ...t,
       subject: c.name,
       subjectCode: c.code,
-      theorySlot: c.theorySlot,
-      labSlot: c.labSlot,
       subjectKey: t.subj
     };
   });
 
   DB.admin = {id:'ADM001', password:'Admin@001', name:'Rajeev Malhotra', role:'admin', title:'Dean of University Operations'};
 
+  DB.alerts = [
+    {
+      id: 'ALT-101',
+      type: 'Priority SOS',
+      role: 'student',
+      studentId: '25bce1002',
+      name: 'Diya Patel',
+      gender: 'female',
+      phone: '+91 98401 10012',
+      dept: 'Computer Science & Engineering',
+      sem: 3,
+      section: 'A',
+      hostel: "Women's Residential Hostel (G-Block)",
+      room: 'Room G-208',
+      parents: {
+        father: {name: 'Mr. Dinesh Patel', phone: '+91 98401 23451'},
+        mother: {name: 'Mrs. Geeta Patel', phone: '+91 98401 33451'},
+        address: '88 Palm Meadows, SG Highway, Ahmedabad'
+      },
+      emergencyNature: 'Medical Emergency',
+      location: 'Central University Library (Reading Hall)',
+      time: '10:45 AM',
+      timestamp: Date.now() - 3600000,
+      status: 'Active'
+    },
+    {
+      id: 'ALT-102',
+      type: 'Priority SOS',
+      role: 'employee',
+      employeeId: 'EMP101',
+      name: 'Dr. Ananya Rao',
+      phone: '+91 98401 90101 (Ext: 2101)',
+      dept: 'Computer Science & Engineering',
+      subject: 'Data Structures & Algorithms',
+      cabin: 'Technology Tower (TT)',
+      room: 'Room TT-210',
+      landmark: 'Adjacent to VLSI CAD Synthesis Lab 3, near Elevator B',
+      emergencyNature: 'Urgent Security Help',
+      location: 'Technology Tower (VLSI Labs, 2nd Floor)',
+      time: '09:15 AM',
+      timestamp: Date.now() - 7200000,
+      status: 'Resolved',
+      resolvedBy: 'Dean of Operations',
+      resolvedTime: '09:40 AM'
+    }
+  ];
+
   DB.announcements = [
     {id:1, title:'Annual Convocation & Innovation Summit 2026', body:'Distinguished alumni and industry leaders will address the campus assembly.', date:'2026-08-25', author:'Dean of Academic Affairs'},
-    {id:2, title:'Soft Skill Exam 1 (Mid-Semester) Examination Schedule Published', body:'Seating matrices and slot time allocations for Soft Skill Exam 1 are now live.', date:'2026-08-22', author:'Controller of Examinations'},
+    {id:2, title:'Soft Skill Exam 1 (Mid-Semester) Examination Schedule Published', body:'Seating matrices and room allocations for Soft Skill Exam 1 are now live.', date:'2026-08-22', author:'Controller of Examinations'},
     {id:3, title:'National Smart Campus Hackathon Finalists Announced', body:'Congratulations to the robotics team on securing 1st place in the zonal finals!', date:'2026-08-20', author:'Research Directorate'},
   ];
 
   DB.teacherMessages = [
     {
       id:cid(), teacherName:'Dr. Ananya Rao', subject:'Data Structures & Algorithms',
-      title:'Graph Traversal Lab Submission Extension (Slot A+TA)',
-      message:'Lab Report 4 submission deadline for Slot A+TA extended to Friday 5:00 PM.',
+      title:'Graph Traversal Lab Report Submission Extension',
+      message:'Lab Report 4 submission deadline extended to Friday 5:00 PM.',
       time:'Today, 10:30 AM'
     },
     {
       id:cid(), teacherName:'Prof. Vikram Singh', subject:'Digital Electronics & VLSI',
-      title:'Special Revision Session for Soft Skill Exam 1 (Slot B)',
-      message:'A 2-hour problem solving workshop for Slot B will be held Thursday at 4:00 PM in Technology Tower Room 211.',
+      title:'Special Revision Session for Soft Skill Exam 1',
+      message:'A 2-hour problem solving workshop will be held Thursday at 4:00 PM in Technology Tower Room 211.',
       time:'Yesterday, 03:15 PM'
     }
   ];
@@ -1761,12 +1808,12 @@ function seedDatabase(){
   ];
 
   DB.exams = [
-    {id:'EXAM-001', subjectCode:'CSE2001', subject:'Data Structures & Algorithms', theorySlot:'SLOT A', labSlot:'SLOT A+TA', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-10', time:'10:00 AM – 01:00 PM', room:'Auditorium Hall A', maxMarks:50, status:'Next in Portal'},
-    {id:'EXAM-002', subjectCode:'ECE2004', subject:'Digital Electronics & VLSI',   theorySlot:'SLOT B', labSlot:'SLOT B+TB', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-12', time:'10:00 AM – 01:00 PM', room:'Hall B-201', maxMarks:50, status:'Scheduled'},
-    {id:'EXAM-003', subjectCode:'MAT2002', subject:'Discrete Mathematics & Graph', theorySlot:'SLOT C', labSlot:'SLOT C+TC', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-15', time:'02:00 PM – 05:00 PM', room:'Auditorium Hall A', maxMarks:50, status:'Scheduled'},
-    {id:'EXAM-004', subjectCode:'CSE2005', subject:'Computer Networks & Security', theorySlot:'SLOT D', labSlot:'SLOT D+TD', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-17', time:'02:00 PM – 05:00 PM', room:'Hall C-104', maxMarks:50, status:'Scheduled'},
-    {id:'EXAM-005', subjectCode:'CSE2001', subject:'Data Structures & Algorithms', theorySlot:'SLOT A', labSlot:'SLOT A+TA', scheme:'Soft Skill Exam 2', type:'Soft Skill Exam 2 (Final Semester)', date:'2026-11-18', time:'09:30 AM – 12:30 PM', room:'Auditorium Hall A', maxMarks:100, status:'Upcoming'},
-    {id:'EXAM-006', subjectCode:'ECE2004', subject:'Digital Electronics & VLSI',   theorySlot:'SLOT B', labSlot:'SLOT B+TB', scheme:'Soft Skill Exam 2', type:'Soft Skill Exam 2 (Final Semester)', date:'2026-11-21', time:'09:30 AM – 12:30 PM', room:'Hall B-201', maxMarks:100, status:'Upcoming'},
+    {id:'EXAM-001', subjectCode:'CSE2001', subject:'Data Structures & Algorithms', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-10', time:'10:00 AM – 01:00 PM', room:'Auditorium Hall A', maxMarks:50, status:'Next in Portal'},
+    {id:'EXAM-002', subjectCode:'ECE2004', subject:'Digital Electronics & VLSI',   scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-12', time:'10:00 AM – 01:00 PM', room:'Hall B-201', maxMarks:50, status:'Scheduled'},
+    {id:'EXAM-003', subjectCode:'MAT2002', subject:'Discrete Mathematics & Graph', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-15', time:'02:00 PM – 05:00 PM', room:'Auditorium Hall A', maxMarks:50, status:'Scheduled'},
+    {id:'EXAM-004', subjectCode:'CSE2005', subject:'Computer Networks & Security', scheme:'Soft Skill Exam 1', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-17', time:'02:00 PM – 05:00 PM', room:'Hall C-104', maxMarks:50, status:'Scheduled'},
+    {id:'EXAM-005', subjectCode:'CSE2001', subject:'Data Structures & Algorithms', scheme:'Soft Skill Exam 2', type:'Soft Skill Exam 2 (Final Semester)', date:'2026-11-18', time:'09:30 AM – 12:30 PM', room:'Auditorium Hall A', maxMarks:100, status:'Upcoming'},
+    {id:'EXAM-006', subjectCode:'ECE2004', subject:'Digital Electronics & VLSI',   scheme:'Soft Skill Exam 2', type:'Soft Skill Exam 2 (Final Semester)', date:'2026-11-21', time:'09:30 AM – 12:30 PM', room:'Hall B-201', maxMarks:100, status:'Upcoming'},
   ];
 
   DB.placementDrives = [
@@ -1796,7 +1843,10 @@ function seedDatabase(){
     {id:cid(), from:'Kabir Singh', role:'student', category:'Infrastructure', desc:'Air conditioning unit in Lab 3 requires maintenance.', time:'1 day ago', status:'Open'},
   ];
   DB.visitors = [
-    {id:cid(), name:'Mr. Sanjay Verma', purpose:'Parent Consultation', hostBy:'Ishita Verma (Student)', date:'2026-08-24', time:'11:00 AM', status:'Approved'},
+    {id:'VIS-101', name:'Mr. Rajesh Sharma', phone:'+91 98401 23456', purpose:'Parent Consultation & Hostel Visit', hostBy:'Aarav Sharma (Student - 25bce1001)', date:'2026-08-25', time:'10:30 AM', gate:'Main Gate 1', status:'Pending Approval'},
+    {id:'VIS-102', name:'Dr. Vikramaditya Sen', phone:'+91 98401 77120', purpose:'Guest Speaker / Keynote Lecture', hostBy:'Dr. Ananya Rao (Faculty - CSE)', date:'2026-08-26', time:'02:00 PM', gate:'Gate 2 (Tech Tower)', status:'Approved'},
+    {id:'VIS-103', name:'Mr. Sanjay Verma', phone:'+91 98401 33450', purpose:'Hostel Guardian Visit', hostBy:'Ishita Verma (Student - 25bce1004)', date:'2026-08-24', time:'11:00 AM', gate:'Main Gate 1', status:'Approved'},
+    {id:'VIS-104', name:'Mr. R. K. Electricals Vendor', phone:'+91 98401 88900', purpose:'Lab 3 AC & Power Inspection', hostBy:'Dean of Operations (Admin)', date:'2026-08-23', time:'09:00 AM', gate:'Service Gate 4', status:'Checked-In'}
   ];
 
   DB.incidents = [
@@ -1980,6 +2030,7 @@ function seedDatabase(){
 
   // Initialize permanent verified receipts for all enrolled students
   DB.students.forEach(s => ensureStudentReceipts(s));
+  ensurePlacementDrivesIds();
 }
 const TODAY_SCHEDULE = [
   { subj:'Data Structures & Algorithms', time:'09:00 AM – 10:00 AM', room:'Room MB-201', type:'Theory Lecture' },
@@ -2517,6 +2568,9 @@ function performLogin(){
     return;
   }
 
+  // Reset AI Mentor conversation history on relogin / fresh login
+  aiMentorHistory = [];
+
   errBox.classList.remove('show');
   closeLoginPortalModal();
   appState = { role: activeRole, user, page: activeRole==='student'?'home':activeRole==='employee'?'thome':'ahome' };
@@ -2528,6 +2582,7 @@ function performLogin(){
 
 function performLogout(){
   appState = { role:null, user:null, page:'home' };
+  aiMentorHistory = []; // Reset AI Mentor conversation history on logout
   stopBusSim();
   closeLoginPortalModal();
   document.getElementById('app-screen').classList.remove('show');
@@ -2589,6 +2644,7 @@ const TEACHER_NAVIGATION = [
   { group:'Safety & Services', items:[
     {k:'parentcomm', l:'Parent Communications', icon:'mail'},
     {k:'safety', l:'Campus Safety & SOS', icon:'shield'},
+    {k:'visitor', l:'Visitor Passes', icon:'ticket'},
     {k:'complaints', l:'Complaints', icon:'message'},
     {k:'announcements', l:'Announcements', icon:'bell'},
   ]}
@@ -2598,6 +2654,7 @@ const ADMIN_NAVIGATION = [
   { group:'Operations Control', items:[
     {k:'ahome', l:'Control Center', icon:'admin'},
     {k:'aalerts', l:'Emergency SOS Alerts', icon:'alert'},
+    {k:'avisitors', l:'Visitor Pass Approvals', icon:'ticket'},
     {k:'bustracking', l:'Fleet & Bus Radar', icon:'bus'},
     {k:'aincidents', l:'Incident Reports', icon:'shield'},
     {k:'asecurity', l:'Security Posts & CCTV', icon:'video'},
@@ -2828,14 +2885,12 @@ function ensureTheoryLabAttendance(u){
       rec.theory = {
         present: thPres,
         total: thTot,
-        last10: rec.last10 ? rec.last10.slice() : [1,1,1,1,0,1,1,1,1,1],
-        slot: s.theorySlot || 'A'
+        last10: rec.last10 ? rec.last10.slice() : [1,1,1,1,0,1,1,1,1,1]
       };
       rec.lab = {
         present: lbPres,
         total: lbTot,
-        last10: [1,1,1,1,1,1,0,1,1,1],
-        slot: s.labSlot || (s.theorySlot ? s.theorySlot+'+T'+s.theorySlot : 'A+TA')
+        last10: [1,1,1,1,1,1,0,1,1,1]
       };
       rec.present = thPres + lbPres;
       rec.total = thTot + lbTot;
@@ -2963,6 +3018,8 @@ const studentViews = {
     const nextExam = (DB.exams && (DB.exams.find(e => e.status === 'Next in Portal') || DB.exams[0])) || {subject:'Data Structures & Algorithms', subjectCode:'CSE2001', type:'Soft Skill Exam 1 (Mid-Semester)', theorySlot:'Slot A', date:'2026-09-10', room:'Auditorium Hall A'};
     const teacherMsg = (DB.teacherMessages && DB.teacherMessages[0]) || {teacherName:'Dr. Ananya Rao', subject:'Data Structures & Algorithms', title:'Lab Extension', message:'Lab Report 4 extended to Friday 5 PM.', time:'Today, 10:30 AM'};
     const adminDir = (DB.adminDirectives && DB.adminDirectives[0]) || {title:'Library 24x7 Open', directive:'Central Library open 24x7 for exams.', author:'Dean of Operations', time:'Active'};
+    const myParentMsgs = (DB.parentMessages || []).filter(m => m.studentId === u.id || m.studentId === 'all');
+    const latestParentAdvisory = myParentMsgs.find(m => m.senderRole === 'faculty' || (m.sender && (m.sender.includes('Dr.') || m.sender.includes('Prof.') || m.sender.includes('Faculty') || m.sender.includes('Dean')))) || myParentMsgs[0];
 
     return `
     <!-- Top Greeting Banner -->
@@ -3018,10 +3075,40 @@ const studentViews = {
           ${nextExam.type || 'Soft Skill Exam 1'}
         </div>
         <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">
-          ${(nextExam.subject||'').split('&')[0].trim()} · <b class="mono" style="color:var(--uni-orange);">${nextExam.theorySlot || 'Slot A'}</b>
+          <b class="mono" style="color:var(--uni-orange);">${nextExam.subjectCode || 'CSE2001'}</b> · ${(nextExam.subject||'').split('&')[0].trim()}
         </div>
       </div>
     </div>
+
+    <!-- Real-time Parent Advisory Dispatched Notification Banner -->
+    ${latestParentAdvisory ? `
+      <div class="card" style="border-left:5px solid var(--uni-orange); background:#fffaf5; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; gap:12px; align-items:flex-start;">
+            <div style="width:38px; height:38px; border-radius:8px; background:var(--uni-orange-soft); color:var(--uni-orange); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              ${ic('mail', 'svg-ic')}
+            </div>
+            <div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <b style="font-size:14px; color:var(--uni-navy);">Official Advisory Dispatched to Your Guardian (${latestParentAdvisory.recipient || (u.parents && u.parents.father ? u.parents.father.name : 'Guardian')})</b>
+                <span class="badge b-warn" style="font-size:10.5px;">${latestParentAdvisory.type}</span>
+                <span style="font-size:11px; color:var(--ink-faint);">${latestParentAdvisory.date} ${latestParentAdvisory.time||''}</span>
+              </div>
+              <div style="font-size:13px; font-weight:700; color:var(--uni-navy); margin-top:4px;">
+                ${latestParentAdvisory.title}
+              </div>
+              <p style="font-size:12px; color:var(--ink); margin-top:3px; line-height:1.5;">
+                "${latestParentAdvisory.body}"
+              </p>
+              <div style="font-size:11.5px; color:var(--ink-dim); margin-top:5px;">
+                Sent by: <b style="color:var(--uni-navy);">${latestParentAdvisory.sender}</b> to registered phone <b class="mono" style="color:var(--uni-orange);">${latestParentAdvisory.parentPhone || (u.parents && u.parents.father ? u.parents.father.phone : '')}</b>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-accent" onclick="navigateToPage('parentcomm')">View Guardian Link →</button>
+        </div>
+      </div>
+    ` : ''}
 
     <!-- Spotlights Row -->
     <div class="grid g2" style="margin-bottom:18px;">
@@ -3056,11 +3143,11 @@ const studentViews = {
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           ${[
-            {time:'08:30 – 09:05 AM', subj:'CSE2001: Data Structures (SLOT A)', type:'Theory (35m)', room:'TT-201', col:'#2563eb'},
-            {time:'09:15 – 09:50 AM', subj:'ECE2004: Digital Electronics (SLOT B)', type:'Theory (35m)', room:'TT-302', col:'#7c3aed'},
-            {time:'10:00 – 10:35 AM', subj:'MAT2002: Discrete Mathematics (SLOT C)', type:'Theory (35m)', room:'SJT-108', col:'#059669'},
-            {time:'10:50 – 11:25 AM', subj:'CSE2005: Computer Networks (SLOT D)', type:'Theory (35m)', room:'SJT-214', col:'#dc2626'},
-            {time:'01:15 – 02:15 PM', subj:'CSE2001: Data Structures Practical (SLOT A+TA)', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706'}
+            {time:'08:30 – 09:05 AM', subj:'CSE2001: Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb'},
+            {time:'09:15 – 09:50 AM', subj:'ECE2004: Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed'},
+            {time:'10:00 – 10:35 AM', subj:'MAT2002: Discrete Mathematics', type:'Theory (35m)', room:'SJT-108', col:'#059669'},
+            {time:'10:50 – 11:25 AM', subj:'CSE2005: Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626'},
+            {time:'01:15 – 02:15 PM', subj:'CSE2001: Data Structures Practical', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706'}
           ].map(sl => `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; background:var(--bg); border:1px solid var(--line); border-left:3px solid ${sl.col}; border-radius:8px; font-size:12px;">
               <div>
@@ -3108,7 +3195,7 @@ const studentViews = {
     <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <div>
         <b style="font-size:16.5px; color:var(--uni-navy);">Dual Theory &amp; Laboratory Attendance Intelligence</b>
-        <div style="font-size:12px; color:var(--ink-dim);">Each registered course features separate <b>Theory Lectures (Slot A–D)</b> and <b>Laboratory Practicals (Slot A+TA–D+TD)</b> tracking with an independent <b>≥75% mandatory cutoff</b>.</div>
+        <div style="font-size:12px; color:var(--ink-dim);">Each registered course features separate <b>Theory Lectures (35 min)</b> and <b>Laboratory Practicals (1 Hour)</b> tracking with an independent <b>≥75% mandatory cutoff</b>.</div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <span class="badge b-good" style="padding:5px 12px; font-size:11.5px;">Dual-Track Forecast Active</span>
@@ -3120,11 +3207,11 @@ const studentViews = {
       ${getSubjects().map(s => {
         const courseRec = (u.attendance && u.attendance[s.key]) || {
           present: 42, total: 50,
-          theory: {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1], slot: s.theorySlot || 'A'},
-          lab: {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1], slot: s.labSlot || 'A+TA'}
+          theory: {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1]},
+          lab: {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1]}
         };
-        const th = courseRec.theory || {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1], slot: s.theorySlot || 'A'};
-        const lb = courseRec.lab || {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1], slot: s.labSlot || 'A+TA'};
+        const th = courseRec.theory || {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1]};
+        const lb = courseRec.lab || {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1]};
 
         const thPct = computeAttPct(th);
         const lbPct = computeAttPct(lb);
@@ -3168,8 +3255,8 @@ const studentViews = {
             <div style="background:#f8fafc; border:1px solid var(--line); border-radius:10px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                  <span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800; font-size:11px;">${(s.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (s.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (s.theorySlot||'A').toUpperCase()} (35m)</span>
-                  <b style="font-size:13.5px; color:var(--uni-navy);">Theory Lectures</b>
+                  <span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800; font-size:11px;">Theory Lecture (35m)</span>
+                  <b style="font-size:13.5px; color:var(--uni-navy);">${s.code || ''} Theory</b>
                 </div>
                 <span class="mono" style="font-size:18px; font-weight:800; color:${thCol};">${thPct}%</span>
               </div>
@@ -3235,8 +3322,8 @@ const studentViews = {
             <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <div style="display:flex; align-items:center; gap:6px;">
-                  <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800; font-size:11px;">${(s.labSlot || (s.theorySlot?s.theorySlot+'+T'+s.theorySlot:'SLOT A+TA')).toUpperCase().startsWith('SLOT') ? (s.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (s.labSlot||(s.theorySlot?s.theorySlot+'+T'+s.theorySlot:'A+TA')).toUpperCase()} (1h)</span>
-                  <b style="font-size:13.5px; color:#78350f;">Laboratory Practicals</b>
+                  <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800; font-size:11px;">Lab Practical (1h)</span>
+                  <b style="font-size:13.5px; color:#78350f;">${s.code || ''} Laboratory</b>
                 </div>
                 <span class="mono" style="font-size:18px; font-weight:800; color:${lbCol};">${lbPct}%</span>
               </div>
@@ -3408,15 +3495,13 @@ const studentViews = {
     return `
     <div style="margin-bottom:14px;">
       <b style="font-size:16px; color:var(--uni-navy);">Academic Ledger · Cumulative CGPA ${cgpa}</b>
-      <div style="font-size:12px; color:var(--ink-dim);">Official transcript marks, allocated slots, and grading breakdown for Semester ${u.sem}.</div>
+      <div style="font-size:12px; color:var(--ink-dim);">Official transcript marks, continuous assessments, and grading breakdown for Semester ${u.sem}.</div>
     </div>
     <div class="card">
       <table>
         <thead>
           <tr>
             <th>Course Code &amp; Title</th>
-            <th>Theory Slot</th>
-            <th>Lab Slot</th>
             <th>Internal (30)</th>
             <th>External (70)</th>
             <th>Total Marks</th>
@@ -3435,8 +3520,6 @@ const studentViews = {
                   <b>${s.name}</b>
                 </div>
               </td>
-              <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:700;">Slot ${s.theorySlot || 'A'}</span></td>
-              <td><span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">Slot ${s.labSlot || (s.theorySlot?s.theorySlot+'+T'+s.theorySlot:'A+TA')}</span></td>
               <td>${m.internal}</td>
               <td>${m.external}</td>
               <td class="mono"><b>${m.total}/100</b></td>
@@ -3748,146 +3831,210 @@ const studentViews = {
   },
 
   /* =========================================================================
-     NEW: PARENT / GUARDIAN COMMUNICATION LINK
+     PARENT / GUARDIAN COMMUNICATION & ADVISORY LINK
      ========================================================================= */
   parentcomm(){
     const u = appState.user;
-    const p = u.parents || {father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23456', email:'rajesh@parent.fox.edu'}, mother:{name:'Mrs. Sunita Sharma', phone:'+91 98401 23457', email:'sunita@parent.fox.edu'}, address:'142 Heritage Residency, Chennai'};
+    const p = u.parents || {
+      father: {name:'Mr. Rajesh Sharma', phone:'+91 98401 23456', email:'rajesh@parent.fox.edu'},
+      mother: {name:'Mrs. Sunita Sharma', phone:'+91 98401 23457', email:'sunita@parent.fox.edu'},
+      address: '142 Heritage Residency, Chennai'
+    };
     const msgs = (DB.parentMessages||[]).filter(m => m.studentId === u.id || m.studentId === 'all');
+    const facultyAdvisories = msgs.filter(m => m.senderRole === 'faculty' || (m.sender && (m.sender.includes('Dr.') || m.sender.includes('Prof.') || m.sender.includes('Faculty') || m.sender.includes('Dean'))));
 
     return `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
       <div>
-        <b style="font-size:16px; color:var(--uni-navy);">Parent &amp; Guardian Communication Portal</b>
-        <div style="font-size:12px; color:var(--ink-dim);">Official link between student, guardians, and faculty mentor for counseling updates and permissions.</div>
+        <b style="font-size:16px; color:var(--uni-navy);">Parent &amp; Guardian Advisory Communication Link</b>
+        <div style="font-size:12px; color:var(--ink-dim);">Live record of all official academic advisories, performance reviews, and notifications transmitted by faculty mentors to your parents/guardians.</div>
       </div>
-      <button class="btn btn-sm btn-accent" onclick="openParentMessageModal()">+ Send Message to Guardian / Mentor</button>
+      <button class="btn btn-sm btn-accent" onclick="openParentMessageModal()">+ Send Request / Outpass to Guardian</button>
     </div>
 
-    <!-- Guardian Profile Card -->
-    <div class="card" style="margin-bottom:16px;">
-      <b style="font-size:14.5px; color:var(--uni-navy); margin-bottom:12px; display:block;">Linked Guardian Contact Information</b>
-      <div class="grid g2" style="font-size:12.5px;">
-        <div style="padding:10px; background:var(--bg); border-radius:8px;">
-          <div>Father / Primary Guardian: <b>${p.father.name}</b></div>
-          <div style="margin-top:4px;">Phone: <b class="mono">${p.father.phone}</b></div>
-          <div style="margin-top:2px;">Verified Email: <span class="mono">${p.father.email}</span></div>
-        </div>
-        <div style="padding:10px; background:var(--bg); border-radius:8px;">
-          <div>Mother / Secondary Guardian: <b>${p.mother.name}</b></div>
-          <div style="margin-top:4px;">Phone: <b class="mono">${p.mother.phone}</b></div>
-          <div style="margin-top:2px;">Verified Email: <span class="mono">${p.mother.email}</span></div>
-        </div>
-      </div>
-      <div style="margin-top:10px; font-size:12px; color:var(--ink-dim);">
-        Registered Permanent Address: <b>${p.address}</b>
-      </div>
-    </div>
-
-    <!-- Official Communication Log -->
-    <div style="margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-      <b style="font-size:14.5px; color:var(--uni-navy);">Communication &amp; Advisory Feed:</b>
-    </div>
-
-    <div class="grid g1" style="display:flex; flex-direction:column; gap:10px;">
-      ${msgs.map(m => `
-        <div class="card" style="padding:16px 20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <span class="badge b-info">${m.type}</span>
-              <b style="font-size:14px; color:var(--uni-navy); margin-left:6px;">${m.title}</b>
-            </div>
-            <span style="font-size:11.5px; color:var(--ink-faint);">${m.date} ${m.time||''}</span>
+    <!-- Notification Highlight if any Advisory from Faculty -->
+    ${facultyAdvisories.length > 0 ? `
+      <div style="background:#fff7ed; border:1px solid #ffedd5; border-left:4px solid var(--uni-orange); border-radius:10px; padding:14px 18px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; background:var(--uni-orange); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; flex-shrink:0;">
+            !
           </div>
-          <p style="font-size:12.5px; color:var(--ink); margin-top:8px; line-height:1.55;">${m.body}</p>
-          <div style="font-size:11.5px; color:var(--ink-dim); margin-top:8px;">Authorized by: <b>${m.sender}</b></div>
+          <div>
+            <b style="font-size:14px; color:#9a3412;">${facultyAdvisories.length} Official Advisory Notice(s) Transmitted to Your Guardian</b>
+            <div style="font-size:12px; color:#7c2d12; margin-top:2px;">
+              Your professors communicate with your registered parents regarding academic progress. You are kept fully informed of all dispatched notices.
+            </div>
+          </div>
         </div>
-      `).join('')}
+        <span class="badge b-good" style="font-size:11px;">Live Guardian Sync Active</span>
+      </div>
+    ` : ''}
+
+    <!-- Guardian Profile Dossier Card -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <b style="font-size:14.5px; color:var(--uni-navy);">Linked Guardian Official Registry</b>
+        <span class="badge b-good">Verified Contact Channels</span>
+      </div>
+      <div class="grid g2" style="font-size:12.5px; gap:12px;">
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Primary Guardian (Father):</div>
+          <div style="font-size:14px; font-weight:800; color:var(--uni-navy); margin-top:4px;">${p.father.name}</div>
+          <div style="margin-top:6px; color:var(--ink);">Phone: <b class="mono" style="color:var(--uni-orange);">${p.father.phone}</b></div>
+          <div style="margin-top:2px; color:var(--ink-dim);">Email: <span class="mono">${p.father.email}</span></div>
+        </div>
+        <div style="padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;">
+          <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Secondary Guardian (Mother):</div>
+          <div style="font-size:14px; font-weight:800; color:var(--uni-navy); margin-top:4px;">${p.mother.name}</div>
+          <div style="margin-top:6px; color:var(--ink);">Phone: <b class="mono" style="color:var(--uni-orange);">${p.mother.phone}</b></div>
+          <div style="margin-top:2px; color:var(--ink-dim);">Email: <span class="mono">${p.mother.email}</span></div>
+        </div>
+      </div>
+      <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line-light); font-size:12px; color:var(--ink-dim);">
+        Registered Permanent Residential Address: <b style="color:var(--uni-navy);">${p.address}</b>
+      </div>
+    </div>
+
+    <!-- Official Communication Log & Advisory Feed -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+        <div>
+          <b style="font-size:15px; color:var(--uni-navy);">Official Guardian Communications &amp; Faculty Advisories Feed</b>
+          <div style="font-size:12px; color:var(--ink-dim);">Chronological record of notices sent to your parents by professors, counselors, and your submitted requests.</div>
+        </div>
+        <span class="badge b-info">${msgs.length} Total Messages</span>
+      </div>
+
+      ${msgs.length > 0 ? `
+        <div class="grid g1" style="display:flex; flex-direction:column; gap:12px;">
+          ${msgs.map(m => {
+            const isFromFaculty = m.senderRole === 'faculty' || (m.sender && (m.sender.includes('Dr.') || m.sender.includes('Prof.') || m.sender.includes('Faculty') || m.sender.includes('Dean')));
+            return `
+            <div style="background:${isFromFaculty?'#fffaf5':'#f8fafc'}; border:1px solid ${isFromFaculty?'#fed7aa':'var(--line)'}; border-left:5px solid ${isFromFaculty?'var(--uni-orange)':'var(--uni-navy)'}; border-radius:10px; padding:16px 18px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                <div>
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="badge ${isFromFaculty?'b-warn':'b-info'}">${m.type}</span>
+                    <b style="font-size:15px; color:var(--uni-navy);">${m.title}</b>
+                    ${isFromFaculty ? `<span class="badge b-good" style="font-size:10px; padding:2px 6px;">Sent to Guardian</span>` : ''}
+                  </div>
+                  <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">
+                    Authorized by: <b style="color:var(--uni-navy);">${m.sender}</b> · Transmitted on: <b>${m.date} at ${m.time||''}</b>
+                  </div>
+                  ${m.recipient ? `
+                    <div style="font-size:11.5px; color:var(--uni-orange); font-weight:600; margin-top:2px;">
+                      Recipient Guardian: ${m.recipient} ${m.parentPhone ? '· Phone: ' + m.parentPhone : ''}
+                    </div>
+                  ` : ''}
+                </div>
+                <div style="text-align:right;">
+                  <span class="badge b-good">Transmitted &amp; Delivered ✓</span>
+                  <div style="margin-top:6px;">
+                    ${isFromFaculty ? (m.acknowledgedByStudent ? `
+                      <span class="badge b-good" style="font-size:10px; padding:2px 6px;">Acknowledged by You ✓</span>
+                    ` : `
+                      <button class="btn btn-sm btn-ghost" style="font-size:11px; padding:2px 8px; border:1px solid #cbd5e1;" onclick="acknowledgeParentMessage('${m.id}')">
+                        Acknowledge Notice
+                      </button>
+                    `) : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div style="background:#ffffff; border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-top:12px; font-size:12.5px; line-height:1.6; color:var(--ink);">
+                "${m.body}"
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      ` : `
+        <div style="text-align:center; padding:30px; color:var(--ink-dim); font-size:12.5px;">
+          No advisories or messages recorded for your guardians yet.
+        </div>
+      `}
     </div>`;
   },
 
   timetable(){
     const subs = getSubjects();
     const subMap = {
-      ds: subs.find(s=>s.key==='ds') || {code:'CSE2001', name:'Data Structures', theorySlot:'SLOT A', labSlot:'SLOT A+TA'},
-      de: subs.find(s=>s.key==='de') || {code:'ECE2004', name:'Digital Electronics', theorySlot:'SLOT B', labSlot:'SLOT B+TB'},
-      dm: subs.find(s=>s.key==='dm') || {code:'MAT2002', name:'Discrete Mathematics', theorySlot:'SLOT C', labSlot:'SLOT C+TC'},
-      cn: subs.find(s=>s.key==='cn') || {code:'CSE2005', name:'Computer Networks', theorySlot:'SLOT D', labSlot:'SLOT D+TD'}
+      ds: subs.find(s=>s.key==='ds') || {code:'CSE2001', name:'Data Structures & Algorithms'},
+      de: subs.find(s=>s.key==='de') || {code:'ECE2004', name:'Digital Electronics & VLSI'},
+      dm: subs.find(s=>s.key==='dm') || {code:'MAT2002', name:'Discrete Mathematics & Graph'},
+      cn: subs.find(s=>s.key==='cn') || {code:'CSE2005', name:'Computer Networks & Security'}
     };
 
     const timetableGrid = [
       {
         day: 'Monday',
-        p1: {slot:'SLOT A', code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        p2: {slot:'SLOT B', code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        p3: {slot:'SLOT C', code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        p4: {slot:'SLOT D', code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        p5: {slot:'SLOT A', code:subMap.ds.code, name:'Algorithm Analysis', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        lab: {slot:'SLOT A+TA', code:subMap.ds.code, name:'Data Structures Practical', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706', bg:'#fffbeb'},
-        p6: {slot:'SLOT B', code:subMap.de.code, name:'Logic Synthesis', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'}
+        p1: {code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        p2: {code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        p3: {code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        p4: {code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        p5: {code:subMap.ds.code, name:'Algorithm Analysis', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        lab: {code:subMap.ds.code, name:'Data Structures Practical', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706', bg:'#fffbeb'},
+        p6: {code:subMap.de.code, name:'Logic Synthesis', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'}
       },
       {
         day: 'Tuesday',
-        p1: {slot:'SLOT B', code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        p2: {slot:'SLOT C', code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        p3: {slot:'SLOT D', code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        p4: {slot:'SLOT A', code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        p5: {slot:'SLOT B', code:subMap.de.code, name:'Sequential Circuits', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        lab: {slot:'SLOT B+TB', code:subMap.de.code, name:'VLSI HDL Simulation Lab', type:'Lab Practical (1 Hour)', room:'VLSI Lab', col:'#d97706', bg:'#fffbeb'},
-        p6: {slot:'SLOT C', code:subMap.dm.code, name:'Combinatorics', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'}
+        p1: {code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        p2: {code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        p3: {code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        p4: {code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        p5: {code:subMap.de.code, name:'Sequential Circuits', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        lab: {code:subMap.de.code, name:'VLSI HDL Simulation Lab', type:'Lab Practical (1 Hour)', room:'VLSI Lab', col:'#d97706', bg:'#fffbeb'},
+        p6: {code:subMap.dm.code, name:'Combinatorics', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'}
       },
       {
         day: 'Wednesday',
-        p1: {slot:'SLOT C', code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        p2: {slot:'SLOT D', code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        p3: {slot:'SLOT A', code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        p4: {slot:'SLOT B', code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        p5: {slot:'SLOT C', code:subMap.dm.code, name:'Graph Algorithms', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        lab: {slot:'SLOT C+TC', code:subMap.dm.code, name:'Graph Computing Workshop', type:'Lab Practical (1 Hour)', room:'Math Center', col:'#d97706', bg:'#fffbeb'},
-        p6: {slot:'SLOT D', code:subMap.cn.code, name:'Socket Programming', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'}
+        p1: {code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        p2: {code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        p3: {code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        p4: {code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        p5: {code:subMap.dm.code, name:'Graph Algorithms', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        lab: {code:subMap.dm.code, name:'Graph Computing Workshop', type:'Lab Practical (1 Hour)', room:'Math Center', col:'#d97706', bg:'#fffbeb'},
+        p6: {code:subMap.cn.code, name:'Socket Programming', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'}
       },
       {
         day: 'Thursday',
-        p1: {slot:'SLOT D', code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        p2: {slot:'SLOT A', code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        p3: {slot:'SLOT B', code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        p4: {slot:'SLOT C', code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        p5: {slot:'SLOT D', code:subMap.cn.code, name:'Routing Protocols', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        lab: {slot:'SLOT D+TD', code:subMap.cn.code, name:'Packet Sniffing & Defense Lab', type:'Lab Practical (1 Hour)', room:'Cyber Lab', col:'#d97706', bg:'#fffbeb'},
-        p6: {slot:'SLOT A', code:subMap.ds.code, name:'Binary Search Trees', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'}
+        p1: {code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        p2: {code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        p3: {code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        p4: {code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        p5: {code:subMap.cn.code, name:'Routing Protocols', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        lab: {code:subMap.cn.code, name:'Packet Sniffing & Defense Lab', type:'Lab Practical (1 Hour)', room:'Cyber Lab', col:'#d97706', bg:'#fffbeb'},
+        p6: {code:subMap.ds.code, name:'Binary Search Trees', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'}
       },
       {
         day: 'Friday',
-        p1: {slot:'SLOT A', code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        p2: {slot:'SLOT B', code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
-        p3: {slot:'SLOT C', code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
-        p4: {slot:'SLOT D', code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
-        p5: {slot:'SLOT A', code:subMap.ds.code, name:'Graph Traversals', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
-        lab: {slot:'SLOT A+TA', code:subMap.ds.code, name:'Advanced Coding Practical', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706', bg:'#fffbeb'},
-        p6: {slot:'SLOT MENTOR', code:'SEM301', name:'Faculty Project Mentorship', type:'Seminar (35m)', room:'Library Room 3', col:'#475569', bg:'#f8fafc'}
+        p1: {code:subMap.ds.code, name:'Data Structures', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        p2: {code:subMap.de.code, name:'Digital Electronics', type:'Theory (35m)', room:'TT-302', col:'#7c3aed', bg:'#f5f3ff'},
+        p3: {code:subMap.dm.code, name:'Discrete Math', type:'Theory (35m)', room:'SJT-108', col:'#059669', bg:'#ecfdf5'},
+        p4: {code:subMap.cn.code, name:'Computer Networks', type:'Theory (35m)', room:'SJT-214', col:'#dc2626', bg:'#fef2f2'},
+        p5: {code:subMap.ds.code, name:'Graph Traversals', type:'Theory (35m)', room:'TT-201', col:'#2563eb', bg:'#eff6ff'},
+        lab: {code:subMap.ds.code, name:'Advanced Coding Practical', type:'Lab Practical (1 Hour)', room:'CAD Lab 3', col:'#d97706', bg:'#fffbeb'},
+        p6: {code:'SEM301', name:'Faculty Project Mentorship', type:'Seminar (35m)', room:'Library Room 3', col:'#475569', bg:'#f8fafc'}
       }
     ];
 
     return `
     <div style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
       <div>
-        <b style="font-size:16px; color:var(--uni-navy);">Academic Course Slots &amp; Weekly Master Timetable</b>
-        <div style="font-size:12px; color:var(--ink-dim);">Theory Classes are <b>35 Minutes</b> · Laboratory Practicals are <b>1 Hour</b> · Theory Slots: <b>SLOT A, B, C, D</b> · Lab Slots: <b>SLOT A+TA, B+TB, C+TC, D+TD</b></div>
+        <b style="font-size:16px; color:var(--uni-navy);">Academic Course Schedule &amp; Weekly Master Timetable</b>
+        <div style="font-size:12px; color:var(--ink-dim);">Theory Classes are <b>35 Minutes</b> · Laboratory Practicals are <b>1 Hour</b></div>
       </div>
       <span class="badge b-good" style="padding:4px 10px;">Semester 3 Active Timetable</span>
     </div>
 
-    <!-- Course & Slot Allocation Legend -->
+    <!-- Course Matrix Legend -->
     <div class="card" style="margin-bottom:16px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <b style="font-size:14.5px; color:var(--uni-navy);">Registered Course Slot Matrix</b>
-        <span class="badge b-info">4 Core Enrolled Courses</span>
+        <b style="font-size:14.5px; color:var(--uni-navy);">Enrolled Academic Courses</b>
+        <span class="badge b-info">${subs.length} Registered Courses</span>
       </div>
       <div class="grid g4" style="gap:10px;">
         ${subs.map(s => {
           const t = (DB.teachers && DB.teachers.find(tch => tch.id === s.teacherId)) || {title:'Dr.', name:'Faculty'};
-          const tslot = (s.theorySlot || 'A').toUpperCase().startsWith('SLOT') ? (s.theorySlot || 'A').toUpperCase() : 'SLOT ' + (s.theorySlot || 'A').toUpperCase();
-          const lslot = (s.labSlot || (s.theorySlot ? s.theorySlot+'+T'+s.theorySlot : 'A+TA')).toUpperCase().startsWith('SLOT') ? (s.labSlot || 'A+TA').toUpperCase() : 'SLOT ' + (s.labSlot || (s.theorySlot ? s.theorySlot+'+T'+s.theorySlot : 'A+TA')).toUpperCase();
           return `
           <div style="background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:10px 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -3895,10 +4042,6 @@ const studentViews = {
               <span class="badge b-info" style="font-size:10px;">${s.credits||4} Credits</span>
             </div>
             <b style="font-size:13px; color:var(--uni-navy); display:block; margin-top:3px;">${s.name}</b>
-            <div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">
-              <span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800; font-size:10.5px;">${tslot} (35m)</span>
-              <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800; font-size:10.5px;">${lslot} (1h)</span>
-            </div>
             <div style="font-size:11px; color:var(--ink-dim); margin-top:5px;">
               Instructor: <b>${t.title} ${t.name}</b>
             </div>
@@ -3907,10 +4050,10 @@ const studentViews = {
       </div>
     </div>
 
-    <!-- Weekly Slot Timetable Grid -->
+    <!-- Weekly Timetable Grid -->
     <div class="card" style="overflow-x:auto;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-        <b style="font-size:14.5px; color:var(--uni-navy);">Weekly Class Schedule with Assigned Theory &amp; Lab Slots</b>
+        <b style="font-size:14.5px; color:var(--uni-navy);">Weekly Class Schedule</b>
         <div style="display:flex; gap:8px; font-size:11.5px;">
           <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; border-radius:2px; background:#2563eb;"></span> Theory (35 min)</span>
           <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; border-radius:2px; background:#d97706;"></span> Lab Practical (1 Hour)</span>
@@ -3935,70 +4078,49 @@ const studentViews = {
               <td><b style="color:var(--uni-navy); font-size:13px;">${row.day}</b></td>
               <td>
                 <div style="background:${row.p1.bg}; border-left:3px solid ${row.p1.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p1.col};">${row.p1.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p1.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p1.col};">${row.p1.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p1.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p1.room}</div>
                 </div>
               </td>
               <td>
                 <div style="background:${row.p2.bg}; border-left:3px solid ${row.p2.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p2.col};">${row.p2.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p2.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p2.col};">${row.p2.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p2.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p2.room}</div>
                 </div>
               </td>
               <td>
                 <div style="background:${row.p3.bg}; border-left:3px solid ${row.p3.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p3.col};">${row.p3.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p3.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p3.col};">${row.p3.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p3.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p3.room}</div>
                 </div>
               </td>
               <td>
                 <div style="background:${row.p4.bg}; border-left:3px solid ${row.p4.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p4.col};">${row.p4.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p4.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p4.col};">${row.p4.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p4.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p4.room}</div>
                 </div>
               </td>
               <td>
                 <div style="background:${row.p5.bg}; border-left:3px solid ${row.p5.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p5.col};">${row.p5.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p5.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p5.col};">${row.p5.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p5.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p5.room}</div>
                 </div>
               </td>
               <td style="background:#fffdf7;">
                 <div style="background:${row.lab.bg}; border-left:3px solid ${row.lab.col}; padding:5px 6px; border-radius:4px; border:1px solid #fde68a;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.lab.col};">${row.lab.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.lab.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.lab.col};">${row.lab.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.lab.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;"><b>${row.lab.room}</b> (1 Hour)</div>
                 </div>
               </td>
               <td>
                 <div style="background:${row.p6.bg}; border-left:3px solid ${row.p6.col}; padding:5px 6px; border-radius:4px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p6.col};">${row.p6.slot}</span>
-                    <span class="mono" style="font-size:9px; color:var(--ink-dim);">${row.p6.code}</span>
-                  </div>
+                  <span class="mono" style="font-size:9.5px; font-weight:800; color:${row.p6.col};">${row.p6.code}</span>
                   <b style="font-size:11px; color:var(--uni-navy); display:block; margin-top:2px;">${row.p6.name}</b>
                   <div style="font-size:9.5px; color:var(--ink-dim); margin-top:2px;">Room: ${row.p6.room}</div>
                 </div>
@@ -4031,7 +4153,7 @@ const studentViews = {
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
         <div>
           <b style="font-size:15px; color:var(--uni-navy);">Master Schedule of Scheduled Examinations</b>
-          <div style="font-size:12px; color:var(--ink-dim);">Official timetable, designated theory &amp; lab slots, session timings, and examination hall seating.</div>
+          <div style="font-size:12px; color:var(--ink-dim);">Official examination timetable, session timings, maximum marks, and hall seating.</div>
         </div>
         <span class="badge b-info">${DB.exams.length} Scheduled Papers</span>
       </div>
@@ -4040,8 +4162,6 @@ const studentViews = {
           <tr>
             <th>Exam Scheme &amp; Type</th>
             <th>Course Code &amp; Title</th>
-            <th>Theory Slot</th>
-            <th>Lab Slot</th>
             <th>Date</th>
             <th>Session Time</th>
             <th>Hall Venue</th>
@@ -4064,8 +4184,6 @@ const studentViews = {
                   <b>${e.subject}</b>
                 </div>
               </td>
-              <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800;">${(e.theorySlot || 'SLOT A').toUpperCase().startsWith('SLOT') ? (e.theorySlot || 'SLOT A').toUpperCase() : 'SLOT ' + (e.theorySlot || 'A').toUpperCase()}</span></td>
-              <td><span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800;">${(e.labSlot || 'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (e.labSlot || 'SLOT A+TA').toUpperCase() : 'SLOT ' + (e.labSlot || 'A+TA').toUpperCase()}</span></td>
               <td class="mono" style="font-weight:700;">${e.date}</td>
               <td>${e.time}</td>
               <td><b>${e.room}</b></td>
@@ -4090,8 +4208,9 @@ const studentViews = {
   visitor(){ return visitorView(false); },
   placement(){
     const u = appState.user;
+    ensurePlacementDrivesIds();
     u.appliedDrives = u.appliedDrives || [];
-    const appliedCount = u.appliedDrives.length;
+    const appliedCount = (DB.placementDrives || []).filter(d => (u.appliedDrives || []).includes(d.id) || (u.appliedDrives || []).includes(d.company)).length;
     const curCgpa = parseFloat(computeCGPA(u)) || 8.5;
 
     return `
@@ -4157,7 +4276,8 @@ const studentViews = {
         </thead>
         <tbody>
           ${DB.placementDrives.map(d => {
-            const isApplied = u.appliedDrives.includes(d.id);
+            const isApplied = (u.appliedDrives || []).includes(d.id) || (u.appliedDrives || []).includes(d.company);
+            const compEsc = (d.company || '').replace(/'/g, "\\'");
             return `
             <tr style="${isApplied ? 'background:#f0fdf4;' : ''}">
               <td>
@@ -4181,12 +4301,12 @@ const studentViews = {
                     <span class="badge b-good" style="display:inline-flex; align-items:center; gap:4px; font-weight:700; padding:4px 8px; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">
                       Registered ✓
                     </span>
-                    <button class="btn btn-sm btn-ghost" style="color:var(--danger); border-color:#fecaca; padding:3px 8px; font-size:11px;" onclick="unregisterFromPlacementDrive('${d.id}')" title="Withdraw Application">
+                    <button type="button" class="btn btn-sm btn-ghost" style="color:var(--danger); border-color:#fecaca; padding:3px 8px; font-size:11px; cursor:pointer;" onclick="unregisterFromPlacementDrive('${d.id}', '${compEsc}')" title="Withdraw Application">
                       Unregister
                     </button>
                   </div>
                 ` : `
-                  <button class="btn btn-sm btn-accent" style="padding:4px 14px; font-size:12px; font-weight:700;" onclick="applyForPlacementDrive('${d.id}')">
+                  <button type="button" class="btn btn-sm btn-accent" style="padding:4px 14px; font-size:12px; font-weight:700; cursor:pointer;" onclick="applyForPlacementDrive('${d.id}', '${compEsc}')">
                     Apply
                   </button>
                 `}
@@ -4282,15 +4402,39 @@ function submitCounselorBooking(){
 }
 
 function openParentMessageModal(){
+  const u = appState.user;
+  const p = u.parents || {father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23456'}};
+
   document.getElementById('form-modal-body').innerHTML = `
-    <h3>Send Message / Outpass to Guardian</h3>
-    <div class="form-row"><label>Message Type</label><select id="pm-type"><option>General Academic Update</option><option>Weekend Outpass Leave Request</option><option>Faculty Consultation Request</option></select></div>
-    <div class="form-row"><label>Subject Headline</label><input id="pm-title" placeholder="e.g. Weekend Home Visit Permission"></div>
-    <div class="form-row"><label>Message Body</label><textarea id="pm-body" placeholder="Write message to parent or mentor..."></textarea></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button><button class="btn btn-accent" onclick="submitParentMessage()">Send Message</button></div>
+    <h3 style="color:var(--uni-navy);">Send Official Outpass / Request to Guardian</h3>
+    <div style="background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px;">
+      Guardian: <b>${p.father.name}</b> · Target Mobile: <b class="mono" style="color:var(--uni-orange);">${p.father.phone}</b>
+    </div>
+    <div class="form-row">
+      <label>1. Request Category</label>
+      <select id="pm-type">
+        <option>Weekend Outpass Leave Request</option>
+        <option>Academic Tuition / Fee Remittance Update</option>
+        <option>Faculty Consultation Meeting Request</option>
+        <option>General Academic Progress Sharing</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>2. Subject Headline</label>
+      <input id="pm-title" placeholder="e.g. Weekend Home Visit Leave Request (29-31 Aug)">
+    </div>
+    <div class="form-row">
+      <label>3. Detailed Message Body</label>
+      <textarea id="pm-body" style="min-height:90px;" placeholder="Write message to parent or mentor..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="submitParentMessage()">Transmit to Guardian</button>
+    </div>
   `;
   openModal('form-modal');
 }
+
 function submitParentMessage(){
   const type = document.getElementById('pm-type').value;
   const title = document.getElementById('pm-title').value.trim();
@@ -4298,15 +4442,232 @@ function submitParentMessage(){
   const u = appState.user;
   if(!title || !body){ toast('Please fill in headline and message.', 'danger'); return; }
 
+  const p = u.parents || {father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23456', email:'rajesh@parent.fox.edu'}};
+
   DB.parentMessages = DB.parentMessages || [];
   DB.parentMessages.unshift({
-    id:cid(), studentId:u.id, sender:`${u.name} (Student)`,
-    type, title, body, date: new Date().toISOString().split('T')[0],
-    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+    id: cid(),
+    studentId: u.id,
+    studentName: u.name,
+    sender: `${u.name} (Student)`,
+    senderRole: 'student',
+    recipient: `${p.father.name} (Parent / Guardian)`,
+    parentPhone: p.father.phone,
+    parentEmail: p.father.email,
+    type: type,
+    title: title,
+    body: body,
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+    isReadByStudent: true,
+    acknowledgedByStudent: true
   });
   saveToSupabase();
   closeModal('form-modal');
-  toast('Message transmitted to guardian portal', 'good');
+  toast('Request transmitted to guardian phone and synced ✓', 'good');
+  renderCurrentPage();
+}
+
+function acknowledgeParentMessage(id){
+  const m = (DB.parentMessages || []).find(x => x.id === id);
+  if(m){
+    m.acknowledgedByStudent = true;
+    m.isReadByStudent = true;
+    saveToSupabase();
+    toast('Official parent advisory acknowledged by student ✓', 'good');
+    renderCurrentPage();
+  }
+}
+
+function openTeacherSendParentAdvisoryModal(studentId){
+  const t = appState.user;
+  const targetStudent = studentId ? DB.students.find(s => s.id === studentId) : null;
+
+  document.getElementById('form-modal-body').innerHTML = `
+    <h3 style="color:var(--uni-navy);">Dispatch Official Faculty Advisory to Guardian</h3>
+    <p style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;">
+      Transmitted directly to student's parent/guardian with live copy synchronized to the student's dashboard.
+    </p>
+
+    <div class="form-row">
+      <label>1. Recipient Student &amp; Linked Guardian</label>
+      <select id="adv-student-select" onchange="updateAdvisoryTargetDetails()">
+        ${!studentId ? `<option value="ALL">All Enrolled Students — (${t.subject || 'My Class'})</option>` : ''}
+        ${DB.students.map(s => `
+          <option value="${s.id}" data-name="${s.name}" data-pname="${s.parents.father.name}" data-pphone="${s.parents.father.phone}" data-pemail="${s.parents.father.email}" ${targetStudent && targetStudent.id === s.id ? 'selected' : ''}>
+            ${s.name} (${s.id}) — Parent: ${s.parents.father.name} (${s.parents.father.phone})
+          </option>
+        `).join('')}
+      </select>
+    </div>
+
+    <!-- Live Target Guardian Info Box -->
+    <div id="adv-guardian-box" style="background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px;">
+      <!-- Dynamically populated -->
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-row">
+        <label>2. Advisory Category</label>
+        <select id="adv-cat" onchange="applyAdvisoryPreset(this.value)">
+          <option value="Academic Advisory">Academic Performance &amp; Progress</option>
+          <option value="Attendance Advisory &amp; Warning">Attendance Shortage &amp; Warning</option>
+          <option value="Praise &amp; Excellence Recognition">Academic Merit &amp; Praise</option>
+          <option value="Exam Preparation Advisory">Semester Examination Guidelines</option>
+          <option value="Parent Consultation Invitation">Parent-Teacher Meeting / Consultation</option>
+          <option value="General Faculty Advisory">General Faculty Advisory</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>3. Course Context</label>
+        <input id="adv-subj" value="${t.subject || 'Data Structures & Algorithms'}" class="mono">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>4. Advisory Subject Headline</label>
+      <input id="adv-title" value="Semester 3 Mid-Term Performance Report &amp; Academic Progress" placeholder="e.g. Attendance Shortage Warning">
+    </div>
+
+    <div class="form-row">
+      <label>5. Advisory Message Body</label>
+      <textarea id="adv-body" style="min-height:90px;" placeholder="Write official message to guardian and student..."></textarea>
+    </div>
+
+    <div style="background:#eff6ff; border:1px dashed #93c5fd; border-radius:8px; padding:8px 12px; margin-bottom:14px; font-size:11.5px; color:#1e40af;">
+      <b>Live Student Notification:</b> The student will immediately receive an active alert on their Academic Dashboard and permanent record in their Parent Link.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button>
+      <button class="btn btn-accent" onclick="submitTeacherParentAdvisory()">Transmit Advisory &amp; Notify Student</button>
+    </div>
+  `;
+  openModal('form-modal');
+  updateAdvisoryTargetDetails();
+  applyAdvisoryPreset('Academic Advisory');
+}
+
+function updateAdvisoryTargetDetails(){
+  const sel = document.getElementById('adv-student-select');
+  const box = document.getElementById('adv-guardian-box');
+  if(!sel || !box) return;
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt) return;
+
+  if(sel.value === 'ALL'){
+    box.innerHTML = `
+      <div style="color:var(--uni-navy); font-weight:700;">Broadcast Mode: All Enrolled Students (${DB.students.length} Students)</div>
+      <div style="color:var(--ink-dim); font-size:11.5px; margin-top:2px;">Each student's registered guardian will receive this message, and all students will be alerted on their portal.</div>
+    `;
+  } else {
+    const sname = opt.getAttribute('data-name');
+    const pname = opt.getAttribute('data-pname');
+    const pphone = opt.getAttribute('data-pphone');
+    const pemail = opt.getAttribute('data-pemail');
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div><b>Target Student:</b> ${sname} (<span class="mono">${sel.value}</span>)</div>
+        <span class="badge b-good">Verified Guardian Link</span>
+      </div>
+      <div style="margin-top:4px; color:var(--ink-dim);">
+        Guardian: <b>${pname}</b> · Phone: <b class="mono" style="color:var(--uni-orange);">${pphone}</b> · Email: <span class="mono">${pemail}</span>
+      </div>
+    `;
+  }
+}
+
+function applyAdvisoryPreset(cat){
+  const sel = document.getElementById('adv-student-select');
+  const stuName = sel ? (sel.options[sel.selectedIndex].getAttribute('data-name') || 'the student') : 'the student';
+  const t = appState.user;
+  const subj = t ? (t.subject || 'the course') : 'the course';
+
+  const titleEl = document.getElementById('adv-title');
+  const bodyEl = document.getElementById('adv-body');
+  if(!titleEl || !bodyEl) return;
+
+  if(cat === 'Academic Advisory'){
+    titleEl.value = `Semester 3 Academic Progress Report — ${subj}`;
+    bodyEl.value = `Dear Guardian, ${stuName} has been consistently participating in ${subj} lectures. We are sharing the continuous assessment progress report. Feel free to connect during faculty consultation hours if you have any questions.`;
+  } else if(cat.includes('Attendance')){
+    titleEl.value = `Official Attendance Advisory Notice — ${subj}`;
+    bodyEl.value = `Dear Guardian, this is an official notification regarding ${stuName}'s attendance in ${subj}. Regular attendance is required to maintain the university mandatory 75% cutoff and avoid examination debarment.`;
+  } else if(cat.includes('Praise') || cat.includes('Excellence')){
+    titleEl.value = `Commendation: Exceptional Academic Merit in ${subj}`;
+    bodyEl.value = `Dear Guardian, we are delighted to inform you that ${stuName} has demonstrated outstanding aptitude, analytical rigor, and top marks in ${subj}. Congratulations on this stellar achievement!`;
+  } else if(cat.includes('Exam')){
+    titleEl.value = `Upcoming Semester Examination Guidelines — ${subj}`;
+    bodyEl.value = `Dear Guardian, the schedule for Soft Skill Exam 1 in ${subj} is now published. Please ensure ${stuName} reviews the syllabus topics and attends all revision sessions.`;
+  } else if(cat.includes('Consultation')){
+    titleEl.value = `Faculty Consultation Invitation — Dr. ${t ? t.name : 'Faculty Mentor'}`;
+    bodyEl.value = `Dear Guardian, I would like to invite you for a brief academic consultation regarding ${stuName}'s semester roadmap. You may visit my cabin or join a scheduled call during my office hours (${t ? t.officeHours : 'Mon-Fri 2-3:30 PM'}).`;
+  } else {
+    titleEl.value = `Faculty Advisory Notice — ${subj}`;
+    bodyEl.value = `Dear Guardian, please review this academic notice regarding ${stuName}'s progress in ${subj}.`;
+  }
+}
+
+function submitTeacherParentAdvisory(){
+  const sel = document.getElementById('adv-student-select');
+  if(!sel) return;
+  const targetVal = sel.value;
+  const cat = document.getElementById('adv-cat').value;
+  const title = document.getElementById('adv-title').value.trim();
+  const body = document.getElementById('adv-body').value.trim();
+  const t = appState.user;
+
+  if(!title || !body){ toast('Please fill in title and message.', 'danger'); return; }
+
+  DB.parentMessages = DB.parentMessages || [];
+
+  if(targetVal === 'ALL'){
+    DB.students.forEach(s => {
+      DB.parentMessages.unshift({
+        id: cid(),
+        studentId: s.id,
+        studentName: s.name,
+        sender: `${t.title} ${t.name} (Faculty - ${t.subject})`,
+        senderRole: 'faculty',
+        recipient: `${s.parents.father.name} (Parent of ${s.name})`,
+        parentPhone: s.parents.father.phone,
+        parentEmail: s.parents.father.email,
+        type: cat,
+        title: title,
+        body: body,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        isReadByStudent: false,
+        acknowledgedByStudent: false
+      });
+    });
+    toast(`Advisory broadcasted to guardians of all ${DB.students.length} students! Students notified in portal.`, 'good');
+  } else {
+    const s = DB.students.find(x => x.id === targetVal);
+    if(s){
+      DB.parentMessages.unshift({
+        id: cid(),
+        studentId: s.id,
+        studentName: s.name,
+        sender: `${t.title} ${t.name} (Faculty - ${t.subject})`,
+        senderRole: 'faculty',
+        recipient: `${s.parents.father.name} (Parent of ${s.name})`,
+        parentPhone: s.parents.father.phone,
+        parentEmail: s.parents.father.email,
+        type: cat,
+        title: title,
+        body: body,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        isReadByStudent: false,
+        acknowledgedByStudent: false
+      });
+      toast(`Advisory sent to guardian of ${s.name} (${s.parents.father.phone}). Student notified on portal!`, 'good');
+    }
+  }
+
+  saveToSupabase();
+  closeModal('form-modal');
   renderCurrentPage();
 }
 
@@ -4444,35 +4805,86 @@ function viewReceiptVoucher(receiptId){
   openModal('receipt-modal');
 }
 
+function ensurePlacementDrivesIds(){
+  if(!DB.placementDrives || DB.placementDrives.length === 0){
+    DB.placementDrives = [
+      {id:'drv-google', company:'Google', role:'Software Engineer (L3/L4) & Systems', ctc:'₹58.2 LPA', date:'2026-09-18', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 8.0', vacancies:'24 Openings', location:'Zurich / Bengaluru'},
+      {id:'drv-apple', company:'Apple', role:'Core OS, Silicon & GPU Systems Engineer', ctc:'₹54.0 LPA', date:'2026-09-21', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 8.0', vacancies:'16 Openings', location:'Hyderabad / Cupertino'},
+      {id:'drv-meta', company:'Meta', role:'AI Infrastructure & Distributed Systems', ctc:'₹52.0 LPA', date:'2026-09-23', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 8.0', vacancies:'18 Openings', location:'London / Menlo Park'},
+      {id:'drv-microsoft', company:'Microsoft', role:'Software Development Engineer (Azure / Core)', ctc:'₹51.0 LPA', date:'2026-09-25', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'35 Openings', location:'Redmond / Hyderabad'},
+      {id:'drv-nvidia', company:'NVIDIA', role:'Deep Learning Systems & CUDA Architect', ctc:'₹48.5 LPA', date:'2026-09-27', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 8.0', vacancies:'20 Openings', location:'Santa Clara / Pune'},
+      {id:'drv-amazon', company:'Amazon', role:'Software Development Engineer (AWS / Retail)', ctc:'₹44.0 LPA', date:'2026-09-29', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.0', vacancies:'50 Openings', location:'Seattle / Bengaluru'},
+      {id:'drv-adobe', company:'Adobe', role:'Creative Cloud SDE & Computer Vision', ctc:'₹42.0 LPA', date:'2026-10-02', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'22 Openings', location:'Noida / San Jose'},
+      {id:'drv-goldman', company:'Goldman Sachs', role:'Quantitative Platform & Algorithmic Systems', ctc:'₹38.0 LPA', date:'2026-10-05', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'28 Openings', location:'New York / Bengaluru'},
+      {id:'drv-atlassian', company:'Atlassian', role:'Cloud Infrastructure SDE & DevOps', ctc:'₹37.5 LPA', date:'2026-10-07', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'15 Openings', location:'Sydney / Bengaluru'},
+      {id:'drv-uber', company:'Uber', role:'Distributed Real-Time Mobility Systems', ctc:'₹36.5 LPA', date:'2026-10-09', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'20 Openings', location:'Amsterdam / Hyderabad'},
+      {id:'drv-oracle', company:'Oracle', role:'Cloud Infrastructure (OCI) Developer', ctc:'₹36.0 LPA', date:'2026-10-12', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'40 Openings', location:'Austin / Bengaluru'},
+      {id:'drv-salesforce', company:'Salesforce', role:'Enterprise Cloud Platform & AI Agents', ctc:'₹35.0 LPA', date:'2026-10-14', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'25 Openings', location:'San Francisco / Hyderabad'},
+      {id:'drv-qualcomm', company:'Qualcomm', role:'5G/6G Modem & DSP Algorithms Engineer', ctc:'₹34.0 LPA', date:'2026-10-16', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'30 Openings', location:'San Diego / Chennai'},
+      {id:'drv-morgan', company:'Morgan Stanley', role:'Financial Technology Systems Analyst', ctc:'₹33.0 LPA', date:'2026-10-19', category:'Tier-1 Super Dream', eligibility:'CGPA ≥ 7.5', vacancies:'25 Openings', location:'London / Mumbai'},
+      {id:'drv-samsung', company:'Samsung R&D', role:'Edge AI, Multimedia & Vision Systems', ctc:'₹31.0 LPA', date:'2026-10-22', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'35 Openings', location:'Seoul / Bengaluru'},
+      {id:'drv-intel', company:'Intel', role:'SOC Architecture & Firmware Engineer', ctc:'₹30.0 LPA', date:'2026-10-24', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'30 Openings', location:'Santa Clara / Bengaluru'},
+      {id:'drv-ti', company:'Texas Instruments', role:'Analog Circuits & Embedded Firmware', ctc:'₹29.0 LPA', date:'2026-10-26', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'20 Openings', location:'Dallas / Bengaluru'},
+      {id:'drv-cisco', company:'Cisco', role:'High-Speed Routing & Security Protocols', ctc:'₹28.5 LPA', date:'2026-10-28', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'45 Openings', location:'San Jose / Bengaluru'},
+      {id:'drv-walmart', company:'Walmart Global Tech', role:'Distributed Retail Supply Chain Tech', ctc:'₹27.5 LPA', date:'2026-10-30', category:'Dream Recruiter', eligibility:'CGPA ≥ 7.0', vacancies:'35 Openings', location:'Bentonville / Bengaluru'},
+      {id:'drv-ibm', company:'IBM Research', role:'Hybrid Cloud & Quantum Algorithms', ctc:'₹25.0 LPA', date:'2026-11-02', category:'Dream Recruiter', eligibility:'CGPA ≥ 6.5', vacancies:'40 Openings', location:'Armonk / Bengaluru'}
+    ];
+  }
+  DB.placementDrives.forEach((d, idx) => {
+    if(!d.id){
+      d.id = 'drv-' + (d.company ? d.company.toLowerCase().replace(/[^a-z0-9]/g, '') : ('idx-' + idx));
+    }
+  });
+}
+
 /* =========================================================================
    PLACEMENT DRIVE REGISTRATION CONTROLLER (APPLY & UNREGISTER)
    ========================================================================= */
-function applyForPlacementDrive(driveId){
-  const u = appState.user;
-  if(!u) return;
-  const drive = (DB.placementDrives || []).find(d => d.id === driveId);
-  if(!drive) return;
-
-  u.appliedDrives = u.appliedDrives || [];
-  if(!u.appliedDrives.includes(driveId)){
-    u.appliedDrives.push(driveId);
+function applyForPlacementDrive(driveId, companyName){
+  ensurePlacementDrivesIds();
+  const u = appState.user || (DB.students && DB.students[0]);
+  if(!u){
+    toast('Please sign in as a student to apply', 'danger');
+    return;
   }
 
-  // Sync to student in DB.students
+  let drive = (DB.placementDrives || []).find(d => (driveId && d.id === driveId) || (d.company && d.company === driveId) || (companyName && d.company === companyName));
+  if(!drive && DB.placementDrives && DB.placementDrives.length > 0){
+    drive = DB.placementDrives[0];
+  }
+  if(!drive){
+    toast('Placement drive details not found', 'danger');
+    return;
+  }
+
+  const validId = drive.id || driveId;
+  u.appliedDrives = u.appliedDrives || [];
+  if(!u.appliedDrives.includes(validId)){
+    u.appliedDrives.push(validId);
+  }
+  if(drive.company && !u.appliedDrives.includes(drive.company)){
+    u.appliedDrives.push(drive.company);
+  }
+
+  // Also sync to DB.students record
   const stu = (DB.students || []).find(s => s.id === u.id);
   if(stu) stu.appliedDrives = u.appliedDrives;
 
   saveToSupabase();
-  toast(`Registered for ${drive.company} (${drive.role}) drive! Application confirmed.`, 'good');
+  toast(`Registered for ${drive.company} (${drive.role}) drive! Application confirmed ✓`, 'good');
   renderCurrentPage();
 }
 
-function unregisterFromPlacementDrive(driveId){
-  const u = appState.user;
+function unregisterFromPlacementDrive(driveId, companyName){
+  ensurePlacementDrivesIds();
+  const u = appState.user || (DB.students && DB.students[0]);
   if(!u) return;
-  const drive = (DB.placementDrives || []).find(d => d.id === driveId);
 
-  u.appliedDrives = (u.appliedDrives || []).filter(id => id !== driveId);
+  const drive = (DB.placementDrives || []).find(d => (driveId && d.id === driveId) || (d.company && d.company === driveId) || (companyName && d.company === companyName));
+  const validId = drive ? drive.id : driveId;
+  const compName = drive ? drive.company : companyName;
+
+  u.appliedDrives = (u.appliedDrives || []).filter(id => id !== validId && id !== compName && id !== driveId);
 
   // Sync to student in DB.students
   const stu = (DB.students || []).find(s => s.id === u.id);
@@ -4806,12 +5218,11 @@ function campusMapView(){
 }
 
 /* =========================================================================
-   10. EMOTIONALLY INTELLIGENT AI MENTOR
+   10. EMOTIONALLY INTELLIGENT AI MENTOR & FACULTY ACADEMIC COPILOT
    ========================================================================= */
-const AI_CUSTOM_QUESTIONS = [
+const STUDENT_AI_QUESTIONS = [
   "Good morning! How are you doing today?",
-  "What are my theory and lab slots?",
-  "What is my theory and lab attendance in Data Structures?",
+  "What is my theory and lab attendance in my courses?",
   "When is our next Soft Skill Exam 1 (Mid-Sem)?",
   "How do I apply for on-campus placement drives?",
   "Is Dr. Ananya Rao in cabin right now?",
@@ -4819,13 +5230,55 @@ const AI_CUSTOM_QUESTIONS = [
   "I'm feeling really stressed about exams, can you help?",
   "How can I improve my CGPA this semester?",
   "What is the live status of campus shuttle buses?",
-  "How do I access and print my tuition receipts?",
+  "What messages have been sent to my parents?",
+  "How do I request a visitor pass for campus entry?",
   "Thank you for the wonderful assistance! Bye!"
+];
+
+const FACULTY_AI_QUESTIONS = [
+  "Which students have attendance below 75% in my course?",
+  "Which students are performing best in academics?",
+  "Which students are struggling or bad in academics / need advisory?",
+  "Comprehensive class academic & attendance breakdown",
+  "Summary of internal assessment vs external marks",
+  "Draft an academic warning advisory for struggling students",
+  "What is my assigned course schedule and roster count?",
+  "How do I mark today's class attendance?",
+  "How do I upload mid-sem marks for my class?",
+  "Is my cabin presence currently visible to students?",
+  "Which students need parent notification for low marks or attendance?",
+  "List all female students in my course for hostel mentoring"
+];
+
+const ADMIN_AI_QUESTIONS = [
+  "What is the current campus security and SOS emergency status?",
+  "How many active student complaints and grievances are pending?",
+  "Summary of student and faculty headcount roster",
+  "How do I broadcast an administrative directive?",
+  "What is the live status of campus shuttle buses?",
+  "Are there pending visitor pass requests for authorization?",
+  "What are the upcoming hosted semester examination dates?",
+  "Show me the institutional NAAC & NIRF accreditations"
 ];
 
 let aiMentorHistory = [];
 
 function aiMentorView(){
+  const isFaculty = appState.role === 'employee';
+  const isAdmin = appState.role === 'admin';
+  const u = appState.user || DB.students[0];
+  const displayName = isFaculty ? `${u.title || 'Prof.'} ${u.name}` : u.name.split(' ')[0];
+
+  const chips = isFaculty ? FACULTY_AI_QUESTIONS : (isAdmin ? ADMIN_AI_QUESTIONS : STUDENT_AI_QUESTIONS);
+
+  let initialGreeting = `Hello ${displayName}! I'm your University AI Mentor. Whether you need your live attendance, faculty cabin availability, study tips, or just someone to help navigate exam stress, I'm here for you!`;
+  if(isFaculty){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms'});
+    initialGreeting = `Good day, ${u.title || 'Dr.'} ${u.name.split(' ')[0]}! I am your Faculty AI Academic Copilot. I have real-time access to student performance, attendance rosters, and marks records for ${myCourse.code} (${myCourse.name}). Ask me about students with low attendance (<75%), who is performing best vs struggling in academics, or tap any prompt below!`;
+  } else if(isAdmin){
+    initialGreeting = `Greetings, ${u.name}! I am the CampusOS Administrative Command Copilot. I monitor live SOS alerts, campus security, student grievances, fleet tracking, and curriculum operations. How may I assist you today?`;
+  }
+
   return `
   <div class="ai-shell">
     <div class="ai-head">
@@ -4833,29 +5286,29 @@ function aiMentorView(){
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </div>
       <div>
-        <b style="font-size:13.5px; color:var(--uni-navy);">CampusOS University AI Mentor</b>
-        <div style="font-size:11px; color:var(--ink-dim);">Emotionally intelligent &amp; grounded on live university records</div>
+        <b style="font-size:13.5px; color:var(--uni-navy);">${isFaculty ? 'Faculty AI Academic & Performance Copilot' : (isAdmin ? 'CampusOS Administrative Operations AI' : 'CampusOS University AI Mentor')}</b>
+        <div style="font-size:11px; color:var(--ink-dim);">${isFaculty ? 'Grounded on live student rosters, course attendance & semester marks' : 'Emotionally intelligent & grounded on live university records'}</div>
       </div>
     </div>
 
     <div class="ai-msgs" id="ai-msgs-container">
       ${aiMentorHistory.length ? aiMentorHistory.map(m => `<div class="ai-bubble ${m.role==='user'?'user':'bot'}">${m.text}</div>`).join('') : `
-        <div class="ai-bubble bot">Hello ${appState.user.name.split(' ')[0]}! I'm your University AI Mentor. Whether you need your live attendance, faculty cabin availability, study tips, or just someone to help navigate exam stress, I'm here for you!</div>
+        <div class="ai-bubble bot">${initialGreeting}</div>
       `}
     </div>
 
-    <!-- 12 Quick Interactive Question Chips -->
+    <!-- Quick Interactive Question Chips -->
     <div class="ai-chips-wrapper">
-      <div class="ai-chips-title">Tap Any Question to Ask Instantly:</div>
+      <div class="ai-chips-title">${isFaculty ? '⚡ Faculty AI Insights & Diagnostic Prompts:' : 'Tap Any Question to Ask Instantly:'}</div>
       <div class="ai-chips-grid">
-        ${AI_CUSTOM_QUESTIONS.map(q => `
+        ${chips.map(q => `
           <button type="button" class="ai-chip" onclick="askAIMentor('${q.replace(/'/g, "\\'")}')">${q}</button>
         `).join('')}
       </div>
     </div>
 
     <div class="ai-input-row">
-      <input id="ai-user-query" placeholder="Ask your university mentor anything or share how you feel..." onkeydown="if(event.key==='Enter') askAIMentor()">
+      <input id="ai-user-query" placeholder="${isFaculty ? 'Ask about student marks, attendance <75%, top performers, or advisories...' : 'Ask your university mentor anything or share how you feel...'}" onkeydown="if(event.key==='Enter') askAIMentor()">
       <button class="ai-send" onclick="askAIMentor()">
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
@@ -4889,22 +5342,144 @@ async function askAIMentor(preset){
   await new Promise(r => setTimeout(r, 320));
 
   const lq = q.toLowerCase();
+  const isFaculty = appState.role === 'employee';
+  const isAdmin = appState.role === 'admin';
+  const u = appState.user || DB.students[0];
   let ans = "";
 
+  // ==========================================
+  // FACULTY-SPECIFIC DIAGNOSTIC AI PROMPTS
+  // ==========================================
+  if(isFaculty && (lq.includes("below 75") || lq.includes("shortage") || (lq.includes("attendance") && (lq.includes("low") || lq.includes("bad") || lq.includes("risk") || lq.includes("who") || lq.includes("which") || lq.includes("short"))))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms', key:'dsa'});
+    const subKey = myCourse.key || 'dsa';
+    
+    const lowAtt = [];
+    const avgAtt = [];
+    const highAtt = [];
+
+    (DB.students || []).forEach(s => {
+      const rec = (s.attendance && s.attendance[subKey]) || {present: 40, total: 50};
+      const pct = computeAttPct(rec);
+      const entry = { name: s.name, id: s.id, pct, present: rec.present, total: rec.total, phone: s.phone, hostel: s.hostel };
+      if(pct < 75) lowAtt.push(entry);
+      else if(pct < 85) avgAtt.push(entry);
+      else highAtt.push(entry);
+    });
+
+    lowAtt.sort((a,b) => a.pct - b.pct);
+    highAtt.sort((a,b) => b.pct - a.pct);
+
+    ans = `📊 Attendance Diagnostic Report for ${myCourse.code} (${myCourse.name})\nInstructor: ${u.title || 'Dr.'} ${u.name} · Roster: ${DB.students.length} Enrolled\n\n` +
+      `⚠️ AT-RISK STUDENTS (<75% DEBAR SHORTAGE):\n` +
+      (lowAtt.length > 0 ? lowAtt.map(s => `• ${s.name} (${s.id.toUpperCase()}): ${s.pct}% (${s.present}/${s.total} sessions) — 🚨 DEBARMENT WARNING`).join('\n') : `• None! All enrolled students currently meet the 75% minimum threshold.`) +
+      `\n\n✅ TOP ATTENDANCE STUDENTS (≥85%):\n` +
+      highAtt.slice(0, 4).map(s => `• ${s.name} (${s.id.toUpperCase()}): ${s.pct}% (${s.present}/${s.total} sessions)`).join('\n') +
+      `\n\n💡 Faculty Action Recommended: Click 'Parent Communications' in your sidebar to dispatch early attendance caution notices to guardians of at-risk students before the semester debar cutoff.`;
+  }
+  // Faculty: Academic Performance (Good in Academics vs Bad / Struggling)
+  else if(isFaculty && (lq.includes("good in") || lq.includes("bad in") || lq.includes("performing best") || lq.includes("struggling") || lq.includes("academics") || lq.includes("academic") || lq.includes("performance") || (lq.includes("marks") && (lq.includes("which") || lq.includes("student") || lq.includes("who"))) || lq.includes("cgpa") || lq.includes("breakdown"))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms', key:'dsa'});
+    const subKey = myCourse.key || 'dsa';
+
+    const ranked = (DB.students || []).map(s => {
+      const m = (s.marks && s.marks[subKey]) || { internal: 26, external: 58, total: 84 };
+      const att = (s.attendance && s.attendance[subKey]) || { present: 44, total: 50 };
+      const attPct = computeAttPct(att);
+      const cgpa = computeCGPA(s);
+      return {
+        name: s.name,
+        id: s.id,
+        gender: s.gender || 'male',
+        internal: m.internal,
+        external: m.external,
+        total: m.total,
+        attPct,
+        cgpa,
+        hostel: s.hostel
+      };
+    });
+
+    ranked.sort((a,b) => b.total - a.total);
+
+    const topPerformers = ranked.filter(s => s.total >= 85 || s.cgpa >= 8.8);
+    const atRiskStudents = ranked.filter(s => s.total < 75 || s.internal < 22 || s.attPct < 75 || s.cgpa < 7.5);
+    const avgScore = (ranked.reduce((acc,s)=>acc+s.total,0)/ranked.length).toFixed(1);
+
+    ans = `🎓 Academic Performance Diagnostic for ${myCourse.code} (${myCourse.name})\nInstructor: ${u.title || 'Dr.'} ${u.name} · Class Average: ${avgScore}/100\n\n` +
+      `🌟 TOP ACADEMIC PERFORMERS (Good in Academics & High CGPA):\n` +
+      topPerformers.slice(0, 4).map(s => `• ${s.name} (${s.id.toUpperCase()}):\n  - Total Marks: ${s.total}/100 (Internal: ${s.internal}/30, External: ${s.external}/70)\n  - CGPA: ${s.cgpa}/10 | Course Attendance: ${s.attPct}%\n  - Assessment: Outstanding conceptual grasp, timely assignment submissions, and consistent test scores.`).join('\n\n') +
+      `\n\n⚠️ AT-RISK / STRUGGLING STUDENTS (Bad in Academics & Need Advisory):\n` +
+      (atRiskStudents.length > 0 ? atRiskStudents.map(s => `• ${s.name} (${s.id.toUpperCase()}):\n  - Total Marks: ${s.total}/100 (Internal: ${s.internal}/30, External: ${s.external}/70)\n  - CGPA: ${s.cgpa}/10 | Attendance: ${s.attPct}% ${s.attPct<75?'(⚠️ Low Attendance)':''}\n  - Weak Area: ${s.internal < 22 ? 'Low continuous internal assessment & quiz scores' : (s.attPct < 75 ? 'Irregular lecture & lab attendance impacting grades' : 'Struggling with complex algorithm problems & proofs')}`).join('\n\n') : `• None. All students are currently meeting the target academic benchmark!`) +
+      `\n\n📋 Faculty Recommended Next Steps:\n` +
+      `1. Schedule a 1-on-1 counseling session in your cabin (${u.cabin}, ${u.room}) during office hours (${u.officeHours || 'Mon-Thu 2:00-4:00 PM'}).\n` +
+      `2. Dispatch an official Parent Advisory from 'Parent Communications' to alert guardians early.\n` +
+      `3. Pair struggling students with top performers (${topPerformers[0] ? topPerformers[0].name : 'peer leaders'}) for laboratory tutorial sessions.`;
+  }
+  // Faculty: Draft Academic Warning Advisory
+  else if(isFaculty && (lq.includes("draft") || lq.includes("template") || lq.includes("warning") || lq.includes("advisory") || lq.includes("parent notification") || lq.includes("notice"))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms'});
+    ans = `📝 Official Parent Academic Advisory Template for ${myCourse.code}:\n\n` +
+      `Subject: Academic Performance & Attendance Advisory — ${myCourse.code} (${myCourse.name})\n\n` +
+      `Dear Parent / Guardian,\n\n` +
+      `This is ${u.title || 'Dr.'} ${u.name} from the Department of Computer Science & Engineering at Fox University.\n\n` +
+      `I am writing to share an update regarding your ward's academic standing in ${myCourse.name} (${myCourse.code}). Their current internal assessment score is [XX]/30 and attendance is [XX]%. Regular attendance and focused practice in weekly laboratory sessions are vital for upcoming semester examinations.\n\n` +
+      `We invite you to encourage regular class participation. I am available in my cabin (${u.cabin}, ${u.room}) during office hours (${u.officeHours || 'Mon-Thu 2:00-4:00 PM'}) for academic counseling.\n\n` +
+      `Warm regards,\n${u.title || 'Dr.'} ${u.name}\n${u.cabin} (${u.room}) · Extension: ${u.phone || '+91 98401 90101'}\n\n` +
+      `💡 You can copy this text and send it directly via the 'Parent Communications' module in your sidebar.`;
+  }
+  // Faculty: Internal vs External Assessment Marks
+  else if(isFaculty && (lq.includes("internal") || lq.includes("external") || lq.includes("assessment") || lq.includes("upload marks") || lq.includes("upload mid-sem"))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms', key:'dsa'});
+    ans = `📑 Semester Assessment Weighting & Grading Guidelines for ${myCourse.name}:\n` +
+      `• Continuous Assessment (Internal): 30 Marks (Quizzes, Mid-Sem Tests, Lab Assignments)\n` +
+      `• Final Semester Examination (External): 70 Marks (End-Term Written & Practical Paper)\n` +
+      `• Passing Benchmark: Minimum 40% aggregate and minimum 75% attendance.\n\n` +
+      `To update or upload new student marks, navigate to 'Upload Semester Marks' in your sidebar, select your course, and enter scores directly into the ledger.`;
+  }
+  // Faculty: Mark Class Attendance Guide
+  else if(isFaculty && (lq.includes("how do i mark") || lq.includes("mark attendance") || lq.includes("mark today"))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms'});
+    ans = `📝 To Mark Class Attendance for ${myCourse.name} (${myCourse.code}):\n` +
+      `1. Click 'Mark Class Attendance' in your sidebar under Teaching & Classes.\n` +
+      `2. Toggle student statuses between Present (P) and Absent (A).\n` +
+      `3. Click 'Save Attendance Record' — this instantly synchronizes live percentages on student and parent dashboards!`;
+  }
+  // Faculty: Female Student Mentoring & Hostel List
+  else if(isFaculty && (lq.includes("female") || lq.includes("women") || lq.includes("girl") || lq.includes("hostel mentoring"))){
+    const femaleStudents = (DB.students || []).filter(s => s.gender === 'female' || (s.hostel && s.hostel.toLowerCase().includes('women')));
+    ans = `👩‍🎓 Female Student Directory & Mentorship List for ${u.title || 'Dr.'} ${u.name}:\n\n` +
+      femaleStudents.map(s => `• ${s.name} (${s.id.toUpperCase()}):\n  - Hostel: ${s.hostel || "Women's Residential Hostel (G-Block)"} (${s.room || 'Room G-208'})\n  - Direct Mobile: ${s.phone}\n  - Academic CGPA: ${computeCGPA(s)}/10`).join('\n\n') +
+      `\n\nAll female students are housed in Women's Residential Hostel (G-Block) under 24x7 security surveillance and resident warden supervision.`;
+  }
+  // Faculty: Course Schedule & Cabin Status
+  else if(isFaculty && (lq.includes("my schedule") || lq.includes("roster count") || lq.includes("my course") || lq.includes("cabin status") || lq.includes("visible to student"))){
+    const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms'});
+    ans = `📋 Faculty Profile & Teaching Overview for ${u.title || 'Dr.'} ${u.name}:\n` +
+      `• Assigned Course: ${myCourse.code} — ${myCourse.name} (4 Credits)\n` +
+      `• Total Enrolled Students: ${DB.students.length} Students\n` +
+      `• Official Cabin: ${u.cabin}, ${u.room} (Live Presence: ${u.inCabin ? '🟢 IN CABIN — Visible to Students' : '⚪ NOT IN CABIN'})\n` +
+      `• Office Hours: ${u.officeHours || 'Mon-Thu 2:00-4:00 PM'}\n` +
+      `• You can toggle your live cabin presence anytime from the Faculty Overview tab.`;
+  }
+
+  // ==========================================
+  // GENERAL & STUDENT AI MENTOR DETECTIONS
+  // ==========================================
   // Emotionally Intelligent Greeting Detection
-  if(/^(hi|hello|hey|good morning|good afternoon|good evening|howdy)/.test(lq) || lq.includes("how are you")){
-    ans = `Good day, ${appState.user.name.split(' ')[0]}! It's truly wonderful to hear from you. I'm feeling energized and ready to help you navigate your academic journey. How is your day treating you so far?`;
+  else if(/^(hi|hello|hey|good morning|good afternoon|good evening|howdy)/.test(lq) || lq.includes("how are you")){
+    ans = `Good day, ${isFaculty ? (u.title||'Dr.') + ' ' + u.name.split(' ')[0] : u.name.split(' ')[0]}! It's truly wonderful to connect with you. I'm feeling energized and ready to assist your academic workflow. How can I help you today?`;
   }
   // Emotionally Intelligent Gratitude & Farewell Detection
   else if(/bye|goodbye|see you|good night|later/.test(lq)){
-    ans = `Goodbye for now, ${appState.user.name.split(' ')[0]}! Take care of yourself, get plenty of rest, and remember I'm always here whenever you need assistance. Have a wonderful day ahead!`;
+    ans = `Goodbye for now, ${isFaculty ? (u.title||'Dr.') + ' ' + u.name.split(' ')[0] : u.name.split(' ')[0]}! Take care of yourself, get plenty of rest, and remember I'm always here whenever you need assistance. Have a wonderful day ahead!`;
   }
   else if(/thank|thanks|appreciate|grateful/.test(lq)){
-    ans = `You are very welcome! It is always my pleasure to assist you. Never hesitate to reach out if you have any questions or just want to review your academic roadmap!`;
+    ans = `You are very welcome! It is always my pleasure to assist you. Never hesitate to reach out if you have any questions or want to review campus records!`;
   }
   // Emotionally Intelligent Stress & Empathy Detection
   else if(/stress|stressed|anxious|anxiety|worried|worry|overwhelmed|scared|pressure|tired|nervous/.test(lq)){
-    ans = `I completely understand, ${appState.user.name.split(' ')[0]}. It is entirely natural to feel the weight of exams and coursework, and acknowledging it is already a big first step.\n\nHere are three practical recommendations:\n1. Head to the 'Mental Wellbeing' section in your sidebar to try the 2-minute box breathing widget.\n2. Try the 25-minute Pomodoro method (25m focused study, 5m relaxing break).\n3. Remember you have a solid academic foundation. Your professors are also available during office hours if you ever need clarification.\n\nYou have the capability to succeed, and you are supported here.`;
+    ans = `I completely understand, ${u.name.split(' ')[0]}. It is entirely natural to feel the weight of exams and coursework, and acknowledging it is already a big first step.\n\nHere are three practical recommendations:\n1. Head to the 'Mental Wellbeing' section in your sidebar to try the 2-minute box breathing widget.\n2. Try the 25-minute Pomodoro method (25m focused study, 5m relaxing break).\n3. Remember you have a solid academic foundation. Your professors are also available during office hours if you ever need clarification.\n\nYou have the capability to succeed, and you are supported here.`;
   }
   // CGPA & Improvement Advice
   else if(/improve|cgpa|tips|study|advice|grade/.test(lq)){
@@ -4927,25 +5502,19 @@ async function askAIMentor(preset){
       const rec = appState.user.attendance[s.key] || {};
       const th = rec.theory || {present:34, total:38};
       const lb = rec.lab || {present:10, total:12};
-      const tslot = (s.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (s.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (s.theorySlot||'A').toUpperCase();
-      const lslot = (s.labSlot||'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (s.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (s.labSlot||'A+TA').toUpperCase();
-      return `• ${s.code || ''} ${s.name}:\n  - Combined: ${computeAttPct(rec)}% (${rec.present}/${rec.total})\n  - Theory (${tslot} · 35m): ${computeAttPct(th)}% (${th.present}/${th.total})\n  - Lab (${lslot} · 1h): ${computeAttPct(lb)}% (${lb.present}/${lb.total})`;
+      return `• ${s.code || ''} ${s.name}:\n  - Combined: ${computeAttPct(rec)}% (${rec.present}/${rec.total})\n  - Theory (35m): ${computeAttPct(th)}% (${th.present}/${th.total})\n  - Lab Practical (1h): ${computeAttPct(lb)}% (${lb.present}/${lb.total})`;
     }).join('\n\n');
   }
-  // Timetable & Course Slots Query
-  else if(/timetable|time table|slot|slots|class schedule|period/.test(lq)){
-    ans = "Semester 3 Course & Slot Allocations:\n" + getSubjects().map(s => {
-      const tslot = (s.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (s.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (s.theorySlot||'A').toUpperCase();
-      const lslot = (s.labSlot||'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (s.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (s.labSlot||'A+TA').toUpperCase();
-      return `• ${s.code}: ${s.name} → Theory: ${tslot} (35m) | Lab: ${lslot} (1 Hour)`;
-    }).join('\n') + "\n• Check the 'Class Timetable' section in your sidebar to view the full weekly matrix!";
+  // Timetable Query
+  else if(/timetable|time table|class schedule|period/.test(lq)){
+    ans = "Semester 3 Registered Academic Courses:\n" + getSubjects().map(s => {
+      return `• ${s.code}: ${s.name} → Theory (35m) & Lab Practical (1 Hour)`;
+    }).join('\n') + "\n• Check the 'Class Timetable' section in your sidebar to view the full weekly schedule!";
   }
   // Exam Scheme & Schedule Query
   else if(/exam|test|schedule|mid sem|soft skill|final sem/.test(lq)){
     ans = "College Examination Scheme & Active Schedule:\n• Soft Skill Exam 1 (Mid-Sem Exam - Currently Next in Portal)\n• Soft Skill Exam 2 (Final Semester Exam)\n\nUpcoming Scheduled Papers:\n" + DB.exams.map(e => {
-      const tslot = (e.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (e.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (e.theorySlot||'A').toUpperCase();
-      const lslot = (e.labSlot||'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (e.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (e.labSlot||'A+TA').toUpperCase();
-      return `• [${e.scheme||e.type}] ${e.subjectCode||''} ${e.subject} (Theory: ${tslot} | Lab: ${lslot}) on ${e.date} at ${e.time} (${e.room})`;
+      return `• [${e.scheme||e.type}] ${e.subjectCode||''} ${e.subject} on ${e.date} at ${e.time} (${e.room})`;
     }).join('\n');
   }
   // Library Hours Query
@@ -4964,8 +5533,41 @@ async function askAIMentor(preset){
   else if(/placement|package|ctc|recruit|recruiter|amazon|google|microsoft|nvidia|apple|meta|oracle|salary|job/.test(lq)){
     ans = "Campus Placement Highlights (100% Track Record):\n• Peak Offer: ₹58.2 LPA by Google\n• Super Dream Recruiters: Microsoft (₹51 LPA), Apple (₹54 LPA), Meta (₹52 LPA), NVIDIA (₹48.5 LPA), Amazon (₹44 LPA), Adobe (₹42 LPA)\n• Tier-1 Average CTC: ₹14.5 LPA across 240+ recruiting partners.\n• Check the 'Campus Placements' section to view active drives and apply!";
   }
+  // Parent Advisory & Guardian Messages Query
+  else if(/parent|guardian|advisory|father|mother|sent to my parent|message to parent/.test(lq)){
+    const u = appState.user;
+    const myParentMsgs = (DB.parentMessages || []).filter(m => m.studentId === u.id || m.studentId === 'all');
+    if(myParentMsgs.length > 0){
+      ans = `Official Guardian Communications Log for ${u.name}:\n` + myParentMsgs.map(m => {
+        return `• [${m.type}] ${m.title} (${m.date} ${m.time||''})\n  - From: ${m.sender}\n  - Target: ${m.recipient || 'Guardian'}\n  - Summary: "${m.body}"`;
+      }).join('\n\n') + "\n\nYou can view full message details and acknowledge notices in the 'Parent / Guardian Link' section in your sidebar.";
+    } else {
+      ans = "No advisories have been dispatched to your parents yet. Any communication sent by faculty will appear in your 'Parent / Guardian Link' section.";
+    }
+  }
+  // Visitor Pass Query
+  else if(/visitor|gate pass|guest pass|entry pass/.test(lq)){
+    const myVisitors = (DB.visitors || []).filter(v => v.hostBy && (v.hostBy.includes(appState.user.name) || v.hostBy.includes(appState.user.id)));
+    if(myVisitors.length > 0){
+      ans = `Your Visitor Passes:\n` + myVisitors.map(v => `• ${v.name} (${v.purpose}) - Status: ${v.status}, Gate: ${v.gate || 'Main Gate 1'}`).join('\n') + `\n\nYou can request new passes from the 'Visitor Pass Management' section.`;
+    } else {
+      ans = `You can request official campus visitor passes for visiting parents or guests from the 'Visitor Pass Management' section in your sidebar. Admin will review and authorize gate access.`;
+    }
+  }
+  // Admin Operations & SOS Status Query
+  else if(isAdmin && (lq.includes("security") || lq.includes("sos") || lq.includes("emergency") || lq.includes("grievance") || lq.includes("complaint") || lq.includes("directive"))){
+    const activeAlerts = (DB.alerts || []).filter(a => a.status === 'Active');
+    const openComplaints = (DB.complaints || []).filter(c => c.status === 'Open').length;
+    ans = `🛡️ Campus Administrative & Security Briefing:\n` +
+      `• Active SOS Emergency Alerts: ${activeAlerts.length} (${activeAlerts.length > 0 ? '🚨 Priority Action Required' : '✅ Campus Green / Normal'})\n` +
+      `• Pending Student Grievances: ${openComplaints} Open Cases\n` +
+      `• Active Enrolled Students: ${DB.students.length} | Faculty Staff: ${DB.teachers.length}\n` +
+      `• Broadcast Directives: ${(DB.adminDirectives || []).length} Notices Active across Student Portals.`;
+  }
   else {
-    ans = `I found that in CampusOS! Try tapping any of the question chips above or ask about your attendance, faculty cabin availability, placement drives, or upcoming exams.`;
+    ans = isFaculty
+      ? `I found that in CampusOS Faculty Intelligence! You can tap any of the prompts above or ask about student attendance shortages (<75%), who is performing best vs struggling in academics, or draft parent advisories.`
+      : `I found that in CampusOS! Try tapping any of the question chips above or ask about your attendance, faculty cabin availability, placement drives, or upcoming exams.`;
   }
 
   aiMentorHistory.push({role:'assistant', text:ans});
@@ -5084,14 +5686,12 @@ const teacherViews = {
           <span class="badge b-good" style="font-size:10px; padding:2px 6px;">My Subject</span>
         </div>
         <div class="stat-tile-val" style="font-size:15px; margin-top:6px; color:var(--uni-navy);">${t.subject}</div>
-        <div style="font-size:11px; color:var(--ink-dim); margin-top:4px;">Code: <b class="mono">${t.subjectCode||'CSE2001'}</b> · Theory: <b>${(t.theorySlot||'SLOT A').toUpperCase()} (35m)</b> · Lab: <b>${(t.labSlot||'SLOT A+TA').toUpperCase()} (1h)</b></div>
+        <div style="font-size:11px; color:var(--ink-dim); margin-top:4px;">Code: <b class="mono">${t.subjectCode||'CSE2001'}</b> · Theory (35m) · Lab Practical (1h)</div>
       </div>
     </div>`;
   },
   tattendance(){
     const t = appState.user;
-    const tslot = (t.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (t.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (t.theorySlot||'A').toUpperCase();
-    const lslot = (t.labSlot||'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (t.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (t.labSlot||'A+TA').toUpperCase();
 
     return `
     <div class="card">
@@ -5103,17 +5703,17 @@ const teacherViews = {
         </div>
         <div style="display:flex; gap:6px;">
           <button class="btn btn-sm ${teacherAttTrack==='theory'?'btn-accent':'btn-ghost'}" style="${teacherAttTrack==='theory'?'background:#2563eb; color:#fff;':''}" onclick="teacherAttTrack='theory'; renderCurrentPage();">
-            Theory (${tslot} · 35m)
+            Theory (35m)
           </button>
           <button class="btn btn-sm ${teacherAttTrack==='lab'?'btn-accent':'btn-ghost'}" style="${teacherAttTrack==='lab'?'background:#d97706; color:#fff;':''}" onclick="teacherAttTrack='lab'; renderCurrentPage();">
-            Lab Practical (${lslot} · 1h)
+            Lab Practical (1h)
           </button>
         </div>
       </div>
 
       <div style="background:${teacherAttTrack==='theory'?'#eff6ff':'#fffbeb'}; border:1px solid ${teacherAttTrack==='theory'?'#bfdbfe':'#fde68a'}; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
         <div>
-          <b>Active Marking Mode:</b> <span style="font-weight:700; color:${teacherAttTrack==='theory'?'#1e40af':'#92400e'};">${teacherAttTrack==='theory' ? 'Theory Lecture (35 min) · ' + tslot : 'Laboratory Practical Session (1 Hour) · ' + lslot}</span>
+          <b>Active Marking Mode:</b> <span style="font-weight:700; color:${teacherAttTrack==='theory'?'#1e40af':'#92400e'};">${teacherAttTrack==='theory' ? 'Theory Lecture (35 min)' : 'Laboratory Practical Session (1 Hour)'}</span>
         </div>
         <span class="badge ${teacherAttTrack==='theory'?'b-info':'b-warn'}">
           ${teacherAttTrack==='theory' ? 'Theory Track' : 'Laboratory Track'}
@@ -5124,8 +5724,8 @@ const teacherViews = {
         <thead>
           <tr>
             <th>Student Name &amp; Reg No</th>
-            <th>Theory Attendance (${tslot})</th>
-            <th>Lab Attendance (${lslot})</th>
+            <th>Theory Attendance</th>
+            <th>Lab Attendance</th>
             <th>Combined %</th>
             <th>Mark Today (${teacherAttTrack==='theory'?'Theory':'Lab'})</th>
           </tr>
@@ -5171,7 +5771,6 @@ const teacherViews = {
   },
   tmarks(){
     const t = appState.user;
-    const tslot = (t.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (t.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (t.theorySlot||'A').toUpperCase();
 
     return `
     <div class="card">
@@ -5180,7 +5779,6 @@ const teacherViews = {
           <span class="mono" style="font-size:11px; font-weight:800; color:var(--uni-orange); background:#fff7ed; padding:2px 6px; border-radius:4px; border:1px solid #ffedd5;">${t.subjectCode || 'CSE2001'}</span>
           <b style="font-size:15px; color:var(--uni-navy);">Upload Semester Marks — ${t.subject}</b>
           <span class="badge b-good" style="font-size:11px; font-weight:700;">My Subject</span>
-          <span class="badge" style="background:#dbeafe; color:#1e40af; font-size:10.5px; font-weight:700;">${tslot}</span>
         </div>
         <span class="badge b-info">Continuous Assessment (CA) &amp; Final</span>
       </div>
@@ -5210,8 +5808,6 @@ const teacherViews = {
         <thead>
           <tr>
             <th>Course Code &amp; Subject</th>
-            <th>Theory Slot</th>
-            <th>Lab Slot</th>
             <th>Exam Type</th>
             <th>Date</th>
             <th>Time</th>
@@ -5233,8 +5829,6 @@ const teacherViews = {
                   ${isMySub ? `<span class="badge b-good" style="font-size:10.5px; padding:2px 7px; font-weight:700;">My Subject</span>` : ''}
                 </div>
               </td>
-              <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:700;">${e.theorySlot || 'Slot A'}</span></td>
-              <td><span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">${e.labSlot || 'Slot A+TA'}</span></td>
               <td><span class="badge b-info">${e.type || 'Mid-Semester'}</span></td>
               <td class="mono"><b>${e.date}</b></td>
               <td>${e.time}</td>
@@ -5257,7 +5851,6 @@ const teacherViews = {
           <span class="mono" style="font-size:11px; font-weight:800; color:var(--uni-orange); background:#fff7ed; padding:2px 6px; border-radius:4px; border:1px solid #ffedd5;">${t.subjectCode || 'CSE2001'}</span>
           <b style="font-size:15px; color:var(--uni-navy);">Enrolled Student Roster — ${t.subject}</b>
           <span class="badge b-good" style="font-size:11px; font-weight:700;">My Subject</span>
-          <span class="badge" style="background:#dbeafe; color:#1e40af; font-size:10.5px; font-weight:700;">Slot ${t.theorySlot||'A'}</span>
         </div>
         <span class="badge b-info">${DB.students.length} Registered Students</span>
       </div>
@@ -5317,25 +5910,132 @@ const teacherViews = {
   faculty(){ return facultyDirectoryView(); },
   bustracking(){ return studentViews.bustracking(); },
   parentcomm(){
+    const t = appState.user;
+    const dispatched = (DB.parentMessages || []).filter(m => m.sender && (m.sender.includes(t.name) || m.senderId === t.id));
+
     return `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-      <b style="font-size:16px; color:var(--uni-navy);">Parent Communication Dispatch</b>
-      <button class="btn btn-sm btn-accent" onclick="openParentMessageModal()">+ Broadcast Advisory to Parents</button>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+      <div>
+        <b style="font-size:16px; color:var(--uni-navy);">Parent &amp; Guardian Communication Dispatch Hub</b>
+        <div style="font-size:12px; color:var(--ink-dim);">Transmit official performance reports, attendance shortage notices, and consultation invites directly to student guardians with live sync to student portal.</div>
+      </div>
+      <button class="btn btn-sm btn-accent" onclick="openTeacherSendParentAdvisoryModal()">+ Broadcast Advisory to Parents</button>
     </div>
-    <div class="card">
+
+    <!-- Quick Stats -->
+    <div class="grid g3" style="margin-bottom:16px;">
+      <div class="stat-tile">
+        <span class="stat-tile-lbl">Enrolled Students</span>
+        <div class="stat-tile-val">${DB.students.length}</div>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-tile-lbl">Linked Guardians Registered</span>
+        <div class="stat-tile-val">${DB.students.length} Primary Guardians</div>
+      </div>
+      <div class="stat-tile" style="border-left:4px solid var(--uni-orange);">
+        <span class="stat-tile-lbl">Advisories Dispatched</span>
+        <div class="stat-tile-val">${dispatched.length} Transmitted</div>
+      </div>
+    </div>
+
+    <!-- Student Roster with Guardian Details & Send Advisory Action -->
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <b style="font-size:14.5px; color:var(--uni-navy);">Student Roster &amp; Guardian Contact Directory</b>
+        <span class="badge b-info">${DB.students.length} Students Enrolled in ${t.subject}</span>
+      </div>
       <table>
-        <thead><tr><th>Student</th><th>Parent</th><th>Phone</th><th>Advisories</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Student Name &amp; Reg No</th>
+            <th>Primary Guardian (Father)</th>
+            <th>Secondary Guardian (Mother)</th>
+            <th>Attendance (${t.subject})</th>
+            <th style="text-align:right;">Actions</th>
+          </tr>
+        </thead>
         <tbody>
-          ${DB.students.map(s => `<tr><td><b>${s.name}</b></td><td>${s.parents.father.name}</td><td class="mono">${s.parents.father.phone}</td><td><button class="btn btn-sm btn-ghost" onclick="openParentMessageModal()">Send Advisory</button></td></tr>`).join('')}
+          ${DB.students.map(s => {
+            const attPct = computeAttPct(s.attendance[t.subjectKey]);
+            return `
+            <tr>
+              <td>
+                <b>${s.name}</b>
+                <div class="mono" style="font-size:11px; color:var(--ink-dim);">${s.id} · Sec ${s.section}</div>
+              </td>
+              <td>
+                <b>${s.parents.father.name}</b>
+                <div class="mono" style="font-size:11px; color:var(--uni-navy);">${s.parents.father.phone}</div>
+              </td>
+              <td>
+                <b>${s.parents.mother.name}</b>
+                <div class="mono" style="font-size:11px; color:var(--ink-dim);">${s.parents.mother.phone}</div>
+              </td>
+              <td>
+                <span class="badge ${attPct>=75?'b-good':'b-bad'}">${attPct}%</span>
+              </td>
+              <td style="text-align:right;">
+                <button class="btn btn-sm btn-accent" style="padding:3px 10px; font-size:11.5px;" onclick="openTeacherSendParentAdvisoryModal('${s.id}')">
+                  Send Advisory
+                </button>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
+    </div>
+
+    <!-- Recent Advisories Log -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <b style="font-size:14.5px; color:var(--uni-navy);">Recent Advisories Dispatched by You</b>
+        <span class="badge b-good">${dispatched.length} Delivered</span>
+      </div>
+      ${dispatched.length > 0 ? `
+        <table>
+          <thead>
+            <tr>
+              <th>Recipient Student &amp; Guardian</th>
+              <th>Advisory Category</th>
+              <th>Subject Headline</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dispatched.map(m => `
+              <tr>
+                <td>
+                  <b>${m.studentName || 'Student'}</b>
+                  <div style="font-size:11px; color:var(--ink-dim);">${m.recipient || 'Guardian'} · <span class="mono">${m.parentPhone||''}</span></div>
+                </td>
+                <td><span class="badge b-info">${m.type}</span></td>
+                <td>
+                  <b>${m.title}</b>
+                  <div style="font-size:11.5px; color:var(--ink-dim);">${m.body ? (m.body.length>60 ? m.body.slice(0,60)+'...' : m.body) : ''}</div>
+                </td>
+                <td style="font-size:11.5px; color:var(--ink-faint);">${m.date} ${m.time||''}</td>
+                <td>
+                  <span class="badge b-good">Transmitted &amp; Synced ✓</span>
+                  ${m.acknowledgedByStudent ? `<div style="font-size:10px; color:var(--good); font-weight:700; margin-top:2px;">Student Acknowledged</div>` : `<div style="font-size:10px; color:var(--ink-dim); margin-top:2px;">Visible to Student</div>`}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : `
+        <div style="text-align:center; padding:20px; color:var(--ink-dim); font-size:12px;">
+          No advisories dispatched yet. Click "Send Advisory" to communicate with a student's guardian.
+        </div>
+      `}
     </div>`;
   },
   campusmap(){ return campusMapView(); },
   aimentor(){ return aiMentorView(); },
   complaints(){ return complaintsView(false); },
   announcements(){ return announcementsView(false); },
-  safety(){ return safetyView(); }
+  safety(){ return safetyView(); },
+  visitor(){ return visitorView(false); }
 };
 
 function openPostNoticeModal(){
@@ -5421,7 +6121,7 @@ const adminViews = {
             <div>
               <b style="font-size:15.5px; color:#991b1b;">PRIORITY EMERGENCY: ${activeAlerts.length} Active SOS Alert${activeAlerts.length>1?'s':''} Triggered</b>
               <div style="font-size:12.5px; color:#7f1d1d; margin-top:2px;">
-                Latest: <b>${activeAlerts[0].name}</b> (${activeAlerts[0].studentId}) at <b>${activeAlerts[0].location}</b> · ${activeAlerts[0].time}
+                Latest: <b>${activeAlerts[0].name}</b> (${activeAlerts[0].role==='employee'?'Faculty ' + (activeAlerts[0].employeeId||'EMP'):'Student ' + (activeAlerts[0].studentId||'')}) at <b>${activeAlerts[0].location}</b> · ${activeAlerts[0].time}
               </div>
             </div>
           </div>
@@ -5493,21 +6193,50 @@ const adminViews = {
       </div>
       ${DB.alerts.length > 0 ? `
         <table>
-          <thead><tr><th>Student</th><th>Incident Location</th><th>Hostel Room</th><th>Student Mobile</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Initiator</th><th>Role / ID</th><th>Incident Location</th><th>Hostel / Cabin Workstation</th><th>Direct Mobile</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            ${DB.alerts.slice(0,5).map(a => `
+            ${DB.alerts.slice(0,5).map(a => {
+              const isFaculty = a.role === 'employee' || !!a.employeeId;
+              const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+              return `
               <tr>
-                <td><b>${a.name}</b><div style="font-size:11px; color:var(--ink-dim);">${a.studentId||'25bce1001'}</div></td>
-                <td><b style="color:var(--uni-orange);">${a.location}</b><div style="font-size:11px; color:var(--ink-dim);">${a.emergencyNature||'Emergency'} · ${a.time}</div></td>
-                <td><b>${a.hostel||"Men's Hostel B-Block"}</b><div style="font-size:11px; color:var(--ink-dim);">${a.room||'Room B-304'}</div></td>
-                <td class="mono"><b>${a.phone||'+91 98401 10011'}</b></td>
+                <td>
+                  <b>${a.name}</b>
+                  <div style="font-size:11px; color:var(--ink-dim);">${a.dept || 'Computer Science & Engineering'}</div>
+                </td>
+                <td>
+                  ${isFaculty ? `
+                    <span class="badge" style="background:#0284c7; color:#fff; font-weight:700;">Faculty</span>
+                    <div class="mono" style="font-size:10.5px; color:var(--ink-dim); margin-top:2px;">${a.employeeId || 'EMP101'}</div>
+                  ` : (isFemale ? `
+                    <span class="badge" style="background:#fce7f3; color:#be185d; font-weight:700;">Female Student</span>
+                    <div class="mono" style="font-size:10.5px; color:var(--ink-dim); margin-top:2px;">${a.studentId || '25bce1002'}</div>
+                  ` : `
+                    <span class="badge b-info">Male Student</span>
+                    <div class="mono" style="font-size:10.5px; color:var(--ink-dim); margin-top:2px;">${a.studentId || '25bce1001'}</div>
+                  `)}
+                </td>
+                <td>
+                  <b style="color:var(--uni-orange);">${a.location}</b>
+                  <div style="font-size:11px; color:var(--ink-dim);">${a.emergencyNature||'Emergency'} · ${a.time}</div>
+                </td>
+                <td>
+                  ${isFaculty ? `
+                    <b style="color:var(--uni-navy);">${a.cabin || 'Technology Tower (TT)'}</b>
+                    <div style="font-size:11px; color:var(--ink-dim);">${a.room || 'Room TT-210'}</div>
+                  ` : `
+                    <b style="color:${isFemale?'#be185d':'var(--uni-navy)'};">${a.hostel || (isFemale ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)")}</b>
+                    <div style="font-size:11px; color:var(--ink-dim);">${a.room || (isFemale ? 'Room G-208' : 'Room B-304')}</div>
+                  `}
+                </td>
+                <td class="mono"><b>${a.phone || '+91 98401 10011'}</b></td>
                 <td><span class="badge ${a.status==='Active'?'b-bad':'b-good'}">${a.status}</span></td>
                 <td>
                   <button class="btn btn-sm btn-p" style="background:#dc2626;" onclick="openSosDossierModal('${a.id}')">Dossier</button>
                   ${a.status==='Active'?`<button class="btn btn-sm btn-ghost" onclick="resolveEmergencyAlert('${a.id}')">Resolve</button>`:''}
                 </td>
-              </tr>
-            `).join('')}
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       ` : `<div style="text-align:center; padding:20px; color:var(--ink-dim);">No emergency alerts on record. Campus security state: Normal.</div>`}
@@ -5519,31 +6248,51 @@ const adminViews = {
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
       <div>
         <b style="font-size:16px; color:var(--uni-navy);">Emergency SOS Command &amp; Contact Dossier Center</b>
-        <div style="font-size:12px; color:var(--ink-dim);">Real-time GPS incident locations, student phone numbers, parent emergency contacts, and residential room records.</div>
+        <div style="font-size:12px; color:var(--ink-dim);">Real-time GPS incident locations, faculty workplace cabins, student &amp; female hostel records, and emergency contacts.</div>
       </div>
     </div>
 
     <div class="grid g1" style="display:flex; flex-direction:column; gap:12px;">
-      ${DB.alerts.length > 0 ? DB.alerts.map(a => `
+      ${DB.alerts.length > 0 ? DB.alerts.map(a => {
+        const isFaculty = a.role === 'employee' || !!a.employeeId;
+        const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+
+        return `
         <div class="card" style="border-left:5px solid ${a.status==='Active'?'#ef4444':'var(--good)'};">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
             <div>
-              <div style="display:flex; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <b style="font-size:15px; color:var(--uni-navy);">${a.name}</b>
-                <span class="mono" style="font-size:12px; color:var(--ink-dim);">(${a.studentId||'25bce1001'})</span>
+                ${isFaculty ? `
+                  <span class="badge" style="background:#0284c7; color:#fff; font-weight:700;">Faculty Staff (${a.employeeId || 'EMP101'})</span>
+                ` : (isFemale ? `
+                  <span class="badge" style="background:#fce7f3; color:#be185d; font-weight:800;">Female Student (${a.studentId || '25bce1002'})</span>
+                ` : `
+                  <span class="badge b-info">Male Student (${a.studentId || '25bce1001'})</span>
+                `)}
                 <span class="badge ${a.status==='Active'?'b-bad':'b-good'}">${a.status==='Active'?'ACTIVE EMERGENCY':'RESOLVED'}</span>
               </div>
+              
               <div style="font-size:12.5px; color:var(--ink); margin-top:4px;">
                 Incident Location: <b style="color:var(--uni-orange);">${a.location}</b> · Nature: <b>${a.emergencyNature||'General Alert'}</b> · Dispatched at: <b>${a.time}</b>
               </div>
-              <div style="font-size:12px; color:var(--ink-dim); margin-top:4px;">
-                Hostel Residence: <b>${a.hostel||"Men's Hostel B-Block"}</b> (${a.room||'Room B-304'}) · Student Direct Phone: <b class="mono" style="color:var(--uni-navy);">${a.phone||'+91 98401 10011'}</b>
-              </div>
-              ${a.parents ? `
-                <div style="font-size:12px; color:var(--ink-dim); margin-top:3px;">
-                  Father: <b>${a.parents.father.name}</b> (${a.parents.father.phone}) · Mother: <b>${a.parents.mother.name}</b> (${a.parents.mother.phone})
+
+              ${isFaculty ? `
+                <div style="font-size:12px; color:var(--ink-dim); margin-top:4px;">
+                  Faculty Official Cabin: <b style="color:var(--uni-navy);">${a.cabin || 'Technology Tower (TT)'}</b> (${a.room || 'Room TT-210'}) · Department: <b>${a.dept || 'Computer Science & Engineering'}</b> · Direct Extension/Phone: <b class="mono" style="color:var(--uni-navy);">${a.phone || '+91 98401 90101'}</b>
                 </div>
-              ` : ''}
+                ${a.landmark ? `<div style="font-size:11.5px; color:var(--ink-dim); margin-top:2px;">Proximity Landmark: ${a.landmark}</div>` : ''}
+              ` : `
+                <div style="font-size:12px; color:var(--ink-dim); margin-top:4px;">
+                  Hostel Residence: <b style="color:${isFemale?'#be185d':'var(--uni-navy)'};">${a.hostel || (isFemale ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)")}</b> (${a.room || (isFemale ? 'Room G-208' : 'Room B-304')}) · Student Direct Phone: <b class="mono" style="color:var(--uni-navy);">${a.phone || '+91 98401 10011'}</b>
+                </div>
+                ${a.parents ? `
+                  <div style="font-size:12px; color:var(--ink-dim); margin-top:3px;">
+                    Father: <b>${a.parents.father.name}</b> (${a.parents.father.phone}) · Mother: <b>${a.parents.mother.name}</b> (${a.parents.mother.phone})
+                  </div>
+                ` : ''}
+              `}
+
               ${a.resolvedBy ? `<div style="font-size:11px; color:var(--good); font-weight:700; margin-top:4px;">Resolved by ${a.resolvedBy} at ${a.resolvedTime}</div>` : ''}
             </div>
 
@@ -5558,8 +6307,8 @@ const adminViews = {
               ` : ''}
             </div>
           </div>
-        </div>
-      `).join('') : `
+        </div>`;
+      }).join('') : `
         <div class="card" style="text-align:center; padding:32px; color:var(--ink-dim);">
           <svg class="svg-ic-lg" viewBox="0 0 24 24" style="stroke:var(--good); margin-bottom:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           <div style="font-size:14px; font-weight:700; color:var(--uni-navy);">No Active Emergency Alerts</div>
@@ -5568,6 +6317,7 @@ const adminViews = {
       `}
     </div>`;
   },
+  aimentor(){ return aiMentorView(); },
   bustracking(){ return studentViews.bustracking(); },
   aincidents(){
     const all = DB.incidents || [];
@@ -5779,6 +6529,8 @@ const adminViews = {
       `}
     </div>`;
   },
+  avisitors(){ return adminVisitorsView(); },
+  visitor(){ return adminVisitorsView(); },
   aexams(){ return adminExamsView(); },
   afaculty(){ return adminFacultyView(); },
   acourses(){ return adminCoursesView(); },
@@ -5799,7 +6551,7 @@ function adminExamsView(){
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
     <div>
       <b style="font-size:16px; color:var(--uni-navy);">University Examination Board &amp; Host Exam Directorate</b>
-      <div style="font-size:12px; color:var(--ink-dim);">Configure official exam schemes (Soft Skill Exam 1 - Mid Sem, Soft Skill Exam 2 - Final Sem), host new examinations, set venues, times, slots, and paper coordinators.</div>
+      <div style="font-size:12px; color:var(--ink-dim);">Configure official exam schemes (Soft Skill Exam 1 - Mid Sem, Soft Skill Exam 2 - Final Sem), host new examinations, set venues, times, and paper coordinators.</div>
     </div>
     <button class="btn btn-accent btn-sm" onclick="openHostExamModal()">+ Host / Schedule New Examination</button>
   </div>
@@ -5837,8 +6589,6 @@ function adminExamsView(){
         <tr>
           <th>Exam Scheme</th>
           <th>Course Code &amp; Title</th>
-          <th>Theory Slot</th>
-          <th>Lab Slot</th>
           <th>Exam Date</th>
           <th>Session Time</th>
           <th>Venue / Hall</th>
@@ -5862,8 +6612,6 @@ function adminExamsView(){
                 <b style="color:var(--uni-navy);">${e.subject}</b>
               </div>
             </td>
-            <td><span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800;">${(e.theorySlot || 'SLOT A').toUpperCase().startsWith('SLOT') ? (e.theorySlot || 'SLOT A').toUpperCase() : 'SLOT ' + (e.theorySlot || 'A').toUpperCase()}</span></td>
-            <td><span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800;">${(e.labSlot || 'SLOT A+TA').toUpperCase().startsWith('SLOT') ? (e.labSlot || 'SLOT A+TA').toUpperCase() : 'SLOT ' + (e.labSlot || 'A+TA').toUpperCase()}</span></td>
             <td class="mono" style="font-weight:700;">${e.date}</td>
             <td>${e.time}</td>
             <td><b>${e.room}</b></td>
@@ -5895,19 +6643,15 @@ function openHostExamModal(){
   document.getElementById('form-modal-body').innerHTML = `
     <h3 style="color:var(--uni-navy);">Host / Schedule New Examination</h3>
     <p style="font-size:12px; color:var(--ink-dim); margin-bottom:14px;">
-      Publish examination sessions, assign college examination schemes, allocate halls/laboratories, and configure slot mappings.
+      Publish examination sessions, assign college examination schemes, allocate halls/laboratories, and configure schedules.
     </p>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
       <div class="form-row">
         <label>Course / Subject</label>
-        <select id="host-exam-course" onchange="updateHostExamSlots()">
+        <select id="host-exam-course">
           ${courses.map(c => {
-            const rawT = (c.theorySlot||'SLOT A').toUpperCase();
-            const rawL = (c.labSlot||'SLOT A+TA').toUpperCase();
-            const tslot = rawT.startsWith('SLOT') ? rawT : 'SLOT ' + rawT;
-            const lslot = rawL.startsWith('SLOT') ? rawL : 'SLOT ' + rawL;
-            return `<option value="${c.key}" data-code="${c.code||'CSE2001'}" data-name="${c.name}" data-tslot="${tslot}" data-lslot="${lslot}">${c.name} (${c.code || c.key.toUpperCase()}) — ${tslot}</option>`;
+            return `<option value="${c.key}" data-code="${c.code||'CSE2001'}" data-name="${c.name}">${c.name} (${c.code || c.key.toUpperCase()})</option>`;
           }).join('')}
         </select>
       </div>
@@ -5934,12 +6678,12 @@ function openHostExamModal(){
           <option value="10:00 AM – 01:00 PM">10:00 AM – 01:00 PM (Morning Session)</option>
           <option value="02:00 PM – 05:00 PM">02:00 PM – 05:00 PM (Afternoon Session)</option>
           <option value="09:30 AM – 12:30 PM">09:30 AM – 12:30 PM (Comprehensive)</option>
-          <option value="02:00 PM – 04:00 PM">02:00 PM – 04:00 PM (Practical Lab Slot)</option>
+          <option value="02:00 PM – 04:00 PM">02:00 PM – 04:00 PM (Practical Lab Session)</option>
         </select>
       </div>
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+    <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px;">
       <div class="form-row">
         <label>Venue / Examination Hall</label>
         <select id="host-exam-room">
@@ -5953,24 +6697,13 @@ function openHostExamModal(){
         </select>
       </div>
       <div class="form-row">
-        <label>Theory Slot</label>
-        <input id="host-exam-tslot" value="SLOT A" class="mono">
-      </div>
-      <div class="form-row">
-        <label>Lab Slot</label>
-        <input id="host-exam-lslot" value="SLOT A+TA" class="mono">
-      </div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <div class="form-row">
         <label>Maximum Marks</label>
         <input id="host-exam-marks" type="number" value="50" min="20" max="100">
       </div>
       <div class="form-row">
-        <label>Portal Status Flag</label>
+        <label>Portal Status</label>
         <select id="host-exam-status">
-          <option value="Next in Portal">Next in Portal (Highlighted for Students)</option>
+          <option value="Next in Portal">Next in Portal</option>
           <option value="Scheduled" selected>Scheduled</option>
           <option value="Upcoming">Upcoming</option>
         </select>
@@ -5983,23 +6716,6 @@ function openHostExamModal(){
     </div>
   `;
   openModal('form-modal');
-  updateHostExamSlots();
-}
-
-function updateHostExamSlots(){
-  const sel = document.getElementById('host-exam-course');
-  if(!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  if(opt){
-    const rawT = (opt.getAttribute('data-tslot') || 'SLOT A').toUpperCase();
-    const rawL = (opt.getAttribute('data-lslot') || 'SLOT A+TA').toUpperCase();
-    const tslot = rawT.startsWith('SLOT') ? rawT : 'SLOT ' + rawT;
-    const lslot = rawL.startsWith('SLOT') ? rawL : 'SLOT ' + rawL;
-    const tinp = document.getElementById('host-exam-tslot');
-    const linp = document.getElementById('host-exam-lslot');
-    if(tinp) tinp.value = tslot;
-    if(linp) linp.value = lslot;
-  }
 }
 
 function submitHostExam(){
@@ -6013,8 +6729,6 @@ function submitHostExam(){
   const date = document.getElementById('host-exam-date').value;
   const time = document.getElementById('host-exam-time').value;
   const room = document.getElementById('host-exam-room').value;
-  const theorySlot = document.getElementById('host-exam-tslot').value;
-  const labSlot = document.getElementById('host-exam-lslot').value;
   const maxMarks = parseInt(document.getElementById('host-exam-marks').value) || 50;
   const status = document.getElementById('host-exam-status').value;
 
@@ -6025,8 +6739,6 @@ function submitHostExam(){
     subjectCode,
     subject: subjectName,
     subjectKey,
-    theorySlot,
-    labSlot,
     scheme,
     type: scheme === 'Soft Skill Exam 1' ? 'Soft Skill Exam 1 (Mid-Semester)' : (scheme === 'Soft Skill Exam 2' ? 'Soft Skill Exam 2 (Final Semester)' : scheme),
     date,
@@ -6047,7 +6759,7 @@ function submitHostExam(){
   DB.announcements.unshift({
     id: cid(),
     title: `${scheme} Hosted: ${subjectCode} (${subjectName})`,
-    body: `Official examination paper scheduled for ${date} at ${time} in ${room}. Designated slots: ${theorySlot} & ${labSlot}.`,
+    body: `Official examination paper scheduled for ${date} at ${time} in ${room}.`,
     date: new Date().toISOString().split('T')[0],
     author: 'Controller of Examinations'
   });
@@ -6517,15 +7229,13 @@ function adminCoursesView(){
 
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <b style="font-size:14.5px; color:var(--uni-navy);">Registered Courses Catalog with Slot Allocations</b>
+      <b style="font-size:14.5px; color:var(--uni-navy);">Registered Courses Catalog</b>
       <span class="badge b-info">${courses.length} Active Modules</span>
     </div>
     <table>
       <thead>
         <tr>
           <th>Course Code &amp; Title</th>
-          <th>Theory Slot</th>
-          <th>Lab Slot</th>
           <th>Credits &amp; Type</th>
           <th>Department / Sem</th>
           <th>Assigned Faculty Instructor</th>
@@ -6548,14 +7258,8 @@ function adminCoursesView(){
               </div>
             </td>
             <td>
-              <span class="badge" style="background:#dbeafe; color:#1e40af; font-weight:800;">${(c.theorySlot||'SLOT A').toUpperCase().startsWith('SLOT') ? (c.theorySlot||'SLOT A').toUpperCase() : 'SLOT ' + (c.theorySlot||'A').toUpperCase()} (35m)</span>
-            </td>
-            <td>
-              <span class="badge" style="background:#fef3c7; color:#92400e; font-weight:800;">${(c.labSlot||(c.theorySlot?c.theorySlot+'+T'+c.theorySlot:'SLOT A+TA')).toUpperCase().startsWith('SLOT') ? (c.labSlot||'SLOT A+TA').toUpperCase() : 'SLOT ' + (c.labSlot||'A+TA').toUpperCase()} (1h)</span>
-            </td>
-            <td>
               <span class="badge b-info">${c.credits || 4} Credits</span>
-              <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">${c.type || 'Theory & Lab'}</div>
+              <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">${c.type || 'Theory & Lab Practical'}</div>
             </td>
             <td>
               <b>${c.dept || 'Computer Science & Engineering'}</b>
@@ -6587,14 +7291,11 @@ function adminCoursesView(){
 
 function openAddCourseModal(){
   const nextIdx = (DB.courses || []).length + 1;
-  const slotLetters = ['A','B','C','D','E','F','G'];
-  const nextTheorySlot = slotLetters[nextIdx % slotLetters.length] || 'E';
-  const nextLabSlot = nextTheorySlot + '+T' + nextTheorySlot;
 
   document.getElementById('form-modal-body').innerHTML = `
     <h3 style="color:var(--uni-navy);">Add New Academic Course</h3>
     <p style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;">
-      Create a curriculum course, assign academic credits, and designate theory &amp; lab slots.
+      Create a curriculum course, assign academic credits, department, and instructor.
     </p>
 
     <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px;">
@@ -6605,30 +7306,6 @@ function openAddCourseModal(){
       <div class="form-row">
         <label>Course Title</label>
         <input id="add-crs-name" placeholder="e.g. Artificial Intelligence &amp; Deep Learning">
-      </div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <div class="form-row">
-        <label>Theory Slot (35m Lecture)</label>
-        <select id="add-crs-tslot">
-          <option value="SLOT A">SLOT A (35 min Lecture Periods)</option>
-          <option value="SLOT B">SLOT B (35 min Lecture Periods)</option>
-          <option value="SLOT C">SLOT C (35 min Lecture Periods)</option>
-          <option value="SLOT D">SLOT D (35 min Lecture Periods)</option>
-          <option value="SLOT E">SLOT E (35 min Lecture Periods)</option>
-          <option value="SLOT F">SLOT F (35 min Lecture Periods)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Lab / Practical Slot (1 Hour)</label>
-        <select id="add-crs-lslot">
-          <option value="SLOT A+TA">SLOT A+TA (1 Hour Hands-on Practical)</option>
-          <option value="SLOT B+TB">SLOT B+TB (1 Hour Hands-on Practical)</option>
-          <option value="SLOT C+TC">SLOT C+TC (1 Hour Computing Workshop)</option>
-          <option value="SLOT D+TD">SLOT D+TD (1 Hour Hands-on Practical)</option>
-          <option value="SLOT E+TE">SLOT E+TE (1 Hour Hands-on Practical)</option>
-        </select>
       </div>
     </div>
 
@@ -6683,8 +7360,6 @@ function submitAddCourse(){
   const code = document.getElementById('add-crs-code').value.trim() || 'CSE3005';
   const name = document.getElementById('add-crs-name').value.trim();
   let key = document.getElementById('add-crs-key').value.trim().toLowerCase();
-  const theorySlot = document.getElementById('add-crs-tslot').value;
-  const labSlot = document.getElementById('add-crs-lslot').value;
   const credits = parseInt(document.getElementById('add-crs-credits').value) || 4;
   const dept = document.getElementById('add-crs-dept').value;
   const sem = parseInt(document.getElementById('add-crs-sem').value) || 3;
@@ -6704,8 +7379,6 @@ function submitAddCourse(){
     key,
     name,
     credits,
-    theorySlot,
-    labSlot,
     sem,
     dept,
     teacherId,
@@ -6722,8 +7395,8 @@ function submitAddCourse(){
     if(!s.attendance[key]){
       s.attendance[key] = {
         present: 44, total: 50,
-        theory: {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1], slot: theorySlot},
-        lab: {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1], slot: labSlot}
+        theory: {present:34, total:38, last10:[1,1,1,1,0,1,1,1,1,1]},
+        lab: {present:10, total:12, last10:[1,1,1,1,1,1,0,1,1,1]}
       };
     }
     s.marks = s.marks || {};
@@ -6734,7 +7407,7 @@ function submitAddCourse(){
 
   saveToSupabase();
   closeModal('form-modal');
-  toast(`Course ${code}: ${name} (${theorySlot}, ${labSlot}) added!`, 'good');
+  toast(`Course ${code}: ${name} added to curriculum!`, 'good');
   renderCurrentPage();
 }
 
@@ -6742,38 +7415,11 @@ function openEditCourseModal(courseKey){
   const c = getSubjects().find(x => x.key === courseKey);
   if(!c) return;
 
-  const curT = (c.theorySlot||'SLOT A').toUpperCase();
-  const curL = (c.labSlot||'SLOT A+TA').toUpperCase();
-
   document.getElementById('form-modal-body').innerHTML = `
     <h3 style="color:var(--uni-navy);">Edit Course Details — ${c.code || c.name}</h3>
     <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px;">
       <div class="form-row"><label>Course Code</label><input id="edit-crs-code" value="${c.code || 'CSE2001'}"></div>
       <div class="form-row"><label>Course Name</label><input id="edit-crs-name" value="${c.name}"></div>
-    </div>
-
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-      <div class="form-row">
-        <label>Theory Slot (35m Lecture)</label>
-        <select id="edit-crs-tslot">
-          <option value="SLOT A" ${curT.includes('A')&&!curT.includes('TA')?'selected':''}>SLOT A (35 min Lecture)</option>
-          <option value="SLOT B" ${curT.includes('B')&&!curT.includes('TB')?'selected':''}>SLOT B (35 min Lecture)</option>
-          <option value="SLOT C" ${curT.includes('C')&&!curT.includes('TC')?'selected':''}>SLOT C (35 min Lecture)</option>
-          <option value="SLOT D" ${curT.includes('D')&&!curT.includes('TD')?'selected':''}>SLOT D (35 min Lecture)</option>
-          <option value="SLOT E" ${curT.includes('E')?'selected':''}>SLOT E (35 min Lecture)</option>
-          <option value="SLOT F" ${curT.includes('F')?'selected':''}>SLOT F (35 min Lecture)</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Lab / Practical Slot (1 Hour)</label>
-        <select id="edit-crs-lslot">
-          <option value="SLOT A+TA" ${curL.includes('A+TA')||curL.includes('A')?'selected':''}>SLOT A+TA (1 Hour Lab)</option>
-          <option value="SLOT B+TB" ${curL.includes('B+TB')||curL.includes('B')?'selected':''}>SLOT B+TB (1 Hour Lab)</option>
-          <option value="SLOT C+TC" ${curL.includes('C+TC')||curL.includes('C')?'selected':''}>SLOT C+TC (1 Hour Workshop)</option>
-          <option value="SLOT D+TD" ${curL.includes('D+TD')||curL.includes('D')?'selected':''}>SLOT D+TD (1 Hour Lab)</option>
-          <option value="SLOT E+TE" ${curL.includes('E+TE')||curL.includes('E')?'selected':''}>SLOT E+TE (1 Hour Lab)</option>
-        </select>
-      </div>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -6789,11 +7435,21 @@ function openEditCourseModal(courseKey){
       <div class="form-row"><label>Semester</label><input id="edit-crs-sem" type="number" value="${c.sem||3}"></div>
     </div>
 
-    <div class="form-row">
-      <label>Assigned Faculty Instructor</label>
-      <select id="edit-crs-teacher">
-        ${DB.teachers.map(t => `<option value="${t.id}" ${c.teacherId===t.id?'selected':''}>${t.title} ${t.name} (${t.cabin}, ${t.room})</option>`).join('')}
-      </select>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-row">
+        <label>Department</label>
+        <select id="edit-crs-dept">
+          <option value="Computer Science & Engineering" ${(c.dept||'').includes('Computer')?'selected':''}>Computer Science &amp; Engineering</option>
+          <option value="Electronics & Communication" ${(c.dept||'').includes('Electronics')?'selected':''}>Electronics &amp; Communication</option>
+          <option value="Information Technology" ${(c.dept||'').includes('Information')?'selected':''}>Information Technology</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Assigned Faculty Instructor</label>
+        <select id="edit-crs-teacher">
+          ${DB.teachers.map(t => `<option value="${t.id}" ${c.teacherId===t.id?'selected':''}>${t.title} ${t.name} (${t.cabin}, ${t.room})</option>`).join('')}
+        </select>
+      </div>
     </div>
 
     <div class="form-row"><label>Description</label><textarea id="edit-crs-desc">${c.desc||''}</textarea></div>
@@ -6812,9 +7468,8 @@ function submitEditCourse(courseKey){
 
   c.code = document.getElementById('edit-crs-code').value.trim() || c.code;
   c.name = document.getElementById('edit-crs-name').value.trim() || c.name;
-  c.theorySlot = document.getElementById('edit-crs-tslot').value || c.theorySlot;
-  c.labSlot = document.getElementById('edit-crs-lslot').value || c.labSlot;
   c.credits = parseInt(document.getElementById('edit-crs-credits').value) || c.credits;
+  c.dept = document.getElementById('edit-crs-dept') ? document.getElementById('edit-crs-dept').value : (c.dept || 'Computer Science & Engineering');
   c.sem = parseInt(document.getElementById('edit-crs-sem').value) || c.sem;
   c.teacherId = document.getElementById('edit-crs-teacher').value;
   c.desc = document.getElementById('edit-crs-desc').value.trim() || c.desc;
@@ -6824,8 +7479,6 @@ function submitEditCourse(courseKey){
   if(t){
     t.subject = c.name;
     t.subjectCode = c.code;
-    t.theorySlot = c.theorySlot;
-    t.labSlot = c.labSlot;
     t.subjectKey = c.key;
   }
 
@@ -6850,16 +7503,117 @@ function removeCourse(courseKey){
 function openSosDossierModal(alertId){
   const a = DB.alerts.find(x => x.id === alertId);
   if(!a) return;
-  const s = DB.students.find(st => st.id === a.studentId) || {
-    name: a.name, phone: a.phone || '+91 98401 10011',
-    dept: a.dept || 'Computer Science & Engineering', sem: a.sem || 3, section: a.section || 'A',
-    hostel: a.hostel || "Men's Residential Hostel (B-Block)", room: a.room || "Room B-304",
-    parents: a.parents || {
-      father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23450'},
-      mother:{name:'Mrs. Sunita Sharma', phone:'+91 98401 33450'},
-      address:'142 Heritage Residency, Lakeview Enclave, Chennai'
-    }
-  };
+
+  const isFaculty = a.role === 'employee' || !!a.employeeId;
+  const isFemaleStudent = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+
+  let profileHtml = '';
+  if(isFaculty){
+    const f = DB.teachers.find(tch => tch.id === a.employeeId || tch.name === a.name.replace(/^(Dr\.|Prof\.)\s*/,'')) || {
+      name: a.name, title: a.name.startsWith('Dr.') ? 'Dr.' : (a.name.startsWith('Prof.') ? 'Prof.' : ''),
+      dept: a.dept || 'Computer Science & Engineering', subject: a.subject || 'Data Structures & Algorithms',
+      cabin: a.cabin || 'Technology Tower (TT)', room: a.room || 'Room TT-210', floor: '2nd Floor', wing: 'West Wing',
+      phone: a.phone || '+91 98401 90101 (Ext: 2101)', email: 'faculty.emergency@fox.edu',
+      landmark: a.landmark || 'Adjacent to VLSI CAD Synthesis Lab 3, nearest to Elevator B'
+    };
+    profileHtml = `
+    <!-- Faculty Staff Information Block -->
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; background:#f0f9ff; border-left:4px solid #0284c7;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:11px; font-weight:700; color:#0369a1; text-transform:uppercase;">Faculty Staff Profile:</span>
+        <span class="badge" style="background:#0284c7; color:#fff; font-size:10px; font-weight:700;">University Faculty</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
+        <div>Name: <b>${a.name}</b></div>
+        <div>Employee ID: <b class="mono">${a.employeeId || 'EMP101'}</b></div>
+        <div>Department: <b>${f.dept || a.dept}</b></div>
+        <div>Assigned Course: <b>${f.subject || a.subject || 'Computer Science'}</b></div>
+      </div>
+      <div style="margin-top:8px; padding-top:6px; border-top:1px solid #bae6fd; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12.5px;">Faculty Direct Phone / Ext: <b class="mono" style="color:var(--uni-navy);">${f.phone || a.phone}</b></span>
+        <a href="tel:${(f.phone||a.phone).replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Faculty</a>
+      </div>
+    </div>
+
+    <!-- Faculty Workspace & Cabin Location -->
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; background:#ffffff;">
+      <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Official Faculty Cabin &amp; Workspace:</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
+        <div>Building: <b style="color:var(--uni-navy);">${f.cabin || a.cabin}</b></div>
+        <div>Cabin Chamber: <b class="mono" style="color:var(--uni-orange);">${f.room || a.room}</b></div>
+        <div>Floor / Wing: <b>${f.floor || '2nd Floor'}, ${f.wing || 'West Wing'}</b></div>
+        <div>Email: <span class="mono" style="font-size:11.5px;">${f.email || 'faculty@fox.edu'}</span></div>
+      </div>
+      <div style="margin-top:8px; padding-top:6px; border-top:1px dashed var(--line); font-size:12px; color:var(--ink-dim);">
+        <b>Proximity Landmark:</b> ${f.landmark || a.landmark || 'Adjacent to CAD Synthesis Lab 3, near Elevator B foyer'}
+      </div>
+    </div>
+    `;
+  } else {
+    const s = DB.students.find(st => st.id === a.studentId) || {
+      name: a.name, phone: a.phone || '+91 98401 10011',
+      dept: a.dept || 'Computer Science & Engineering', sem: a.sem || 3, section: a.section || 'A',
+      hostel: a.hostel || (isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)"),
+      room: a.room || (isFemaleStudent ? "Room G-208" : "Room B-304"),
+      parents: a.parents || {
+        father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23450'},
+        mother:{name:'Mrs. Sunita Sharma', phone:'+91 98401 33450'},
+        address:'142 Heritage Residency, Lakeview Enclave, Chennai'
+      }
+    };
+    const hostelDisplay = a.hostel || s.hostel || (isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)");
+    const roomDisplay = a.room || s.room || (isFemaleStudent ? "Room G-208" : "Room B-304");
+
+    profileHtml = `
+    <!-- Student Details Grid -->
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; ${isFemaleStudent ? 'background:#fdf2f8; border-left:4px solid #ec4899;' : ''}">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Student Information:</span>
+        ${isFemaleStudent ? `<span class="badge" style="background:#fce7f3; color:#be185d; font-weight:700; font-size:10px;">Female Student</span>` : `<span class="badge b-info" style="font-size:10px;">Student</span>`}
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
+        <div>Name: <b>${s.name}</b></div>
+        <div>Registration ID: <b class="mono">${a.studentId||s.id}</b></div>
+        <div>Department: <b>${s.dept}</b></div>
+        <div>Academic: <b>Sem ${s.sem} (Sec ${s.section})</b></div>
+      </div>
+      <div style="margin-top:8px; padding-top:6px; border-top:1px solid var(--line-light); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12.5px;">Student Direct Mobile: <b class="mono" style="color:var(--uni-orange);">${s.phone||a.phone}</b></span>
+        <a href="tel:${(s.phone||a.phone).replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Student</a>
+      </div>
+    </div>
+
+    <!-- Residential Hostel & Room Details -->
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; ${isFemaleStudent ? 'background:#fff5f7; border-color:#fbcfe8;' : ''}">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Campus Residential Hostel &amp; Room:</span>
+        ${isFemaleStudent ? `<span class="badge" style="background:#fbcfe8; color:#9d174d; font-weight:800; font-size:10.5px;">Women's Hostel Facility</span>` : ''}
+      </div>
+      <div style="font-size:12.5px;">
+        Hostel Residence: <b style="color:${isFemaleStudent ? '#be185d' : 'var(--uni-navy)'};">${hostelDisplay}</b>
+      </div>
+      <div style="font-size:12.5px; margin-top:2px;">
+        Room Number: <b class="mono" style="color:var(--uni-orange);">${roomDisplay}</b>
+      </div>
+    </div>
+
+    <!-- Parents & Guardian Emergency Contacts -->
+    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; background:#f8fafc;">
+      <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Parents / Guardian Emergency Contacts:</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
+        <div>Father: <b>${s.parents.father.name}</b> (<span class="mono">${s.parents.father.phone}</span>)</div>
+        <a href="tel:${s.parents.father.phone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Father</a>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
+        <div>Mother: <b>${s.parents.mother.name}</b> (<span class="mono">${s.parents.mother.phone}</span>)</div>
+        <a href="tel:${s.parents.mother.phone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Mother</a>
+      </div>
+      <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">
+        Permanent Address: ${s.parents.address}
+      </div>
+    </div>
+    `;
+  }
 
   document.getElementById('sos-dossier-content').innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -6878,52 +7632,12 @@ function openSosDossierModal(alertId){
       </div>
     </div>
 
-    <!-- Student Details Grid -->
-    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px;">
-      <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Student Information:</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
-        <div>Name: <b>${s.name}</b></div>
-        <div>Registration ID: <b class="mono">${a.studentId||s.id}</b></div>
-        <div>Department: <b>${s.dept}</b></div>
-        <div>Academic: <b>Sem ${s.sem} (Sec ${s.section})</b></div>
-      </div>
-      <div style="margin-top:8px; padding-top:6px; border-top:1px solid var(--line-light); display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:12.5px;">Student Direct Mobile: <b class="mono" style="color:var(--uni-orange);">${s.phone||a.phone}</b></span>
-        <a href="tel:${(s.phone||a.phone).replace(/\\s+/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Student</a>
-      </div>
-    </div>
-
-    <!-- Residential Hostel & Room Details -->
-    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px;">
-      <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Campus Hostel &amp; Live Room:</div>
-      <div style="font-size:12.5px;">
-        Hostel Block: <b style="color:var(--uni-navy);">${s.hostel||a.hostel}</b>
-      </div>
-      <div style="font-size:12.5px; margin-top:2px;">
-        Room Number: <b class="mono" style="color:var(--uni-orange);">${s.room||a.room}</b>
-      </div>
-    </div>
-
-    <!-- Parents & Guardian Emergency Contacts -->
-    <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; background:#f8fafc;">
-      <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Parents / Guardian Contacts:</div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
-        <div>Father: <b>${s.parents.father.name}</b> (<span class="mono">${s.parents.father.phone}</span>)</div>
-        <a href="tel:${s.parents.father.phone.replace(/\\s+/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Father</a>
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
-        <div>Mother: <b>${s.parents.mother.name}</b> (<span class="mono">${s.parents.mother.phone}</span>)</div>
-        <a href="tel:${s.parents.mother.phone.replace(/\\s+/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Mother</a>
-      </div>
-      <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">
-        Permanent Address: ${s.parents.address}
-      </div>
-    </div>
+    ${profileHtml}
 
     <!-- Action Buttons -->
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('sos-dossier-modal')">Close</button>
-      <button class="btn btn-p" style="background:#2563eb;" onclick="toast('Campus Patrol Team (Officer Selvakumar) dispatched to ' + '${a.location.replace(/'/g,"\\'")}', 'good')">
+      <button class="btn btn-p" style="background:#2563eb;" onclick="toast('Campus Patrol Team dispatched to ' + '${a.location.replace(/'/g,"\\'")}', 'good')">
         Dispatch Patrol Guard
       </button>
       ${a.status==='Active' ? `
@@ -7543,17 +8257,337 @@ function submitIncident(){
   renderCurrentPage();
 }
 
-function visitorView(isAdmin){
+let adminVisitorFilter = 'all';
+
+function setAdminVisitorFilter(f){
+  adminVisitorFilter = f;
+  renderCurrentPage();
+}
+
+function adminVisitorsView(){
+  const all = DB.visitors || [];
+  const pendingCount = all.filter(v => v.status === 'Pending Approval').length;
+  const approvedCount = all.filter(v => v.status === 'Approved').length;
+  const checkedInCount = all.filter(v => v.status === 'Checked-In').length;
+  const rejectedCount = all.filter(v => v.status === 'Rejected').length;
+
+  const list = adminVisitorFilter === 'pending' ? all.filter(v => v.status === 'Pending Approval') :
+               adminVisitorFilter === 'approved' ? all.filter(v => v.status === 'Approved') :
+               adminVisitorFilter === 'checkedin' ? all.filter(v => v.status === 'Checked-In') :
+               adminVisitorFilter === 'rejected' ? all.filter(v => v.status === 'Rejected') : all;
+
   return `
-  <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
-    <b style="font-size:16px; color:var(--uni-navy);">Visitor Passes</b>
-    ${!isAdmin ? `<button class="btn btn-sm btn-accent" onclick="openVisitorModal()">+ Request Pass</button>` : ''}
+  <!-- Top Action & Overview Header -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+    <div>
+      <b style="font-size:16px; color:var(--uni-navy);">Campus Visitor Pass &amp; Gate Entry Approvals Directorate</b>
+      <div style="font-size:12px; color:var(--ink-dim);">Review guest pass requests from students and faculty, authorize gate access, and track on-campus visitors in real time.</div>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-sm btn-accent" onclick="openAdminIssueGatePassModal()">+ Issue Official Gate Pass</button>
+    </div>
   </div>
+
+  <!-- Operational Metric Tiles -->
+  <div class="grid g4" style="margin-bottom:16px;">
+    <div class="stat-tile" style="border-left:4px solid ${pendingCount>0?'#ef4444':'var(--good)'};">
+      <div class="stat-tile-top">
+        <span class="stat-tile-lbl">Pending Approvals</span>
+        <span class="badge ${pendingCount>0?'b-bad':'b-good'}">${pendingCount>0?'Action Required':'All Cleared'}</span>
+      </div>
+      <div class="stat-tile-val" style="color:${pendingCount>0?'var(--danger)':'var(--uni-navy)'};">${pendingCount}</div>
+      <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">Awaiting Dean Authorization</div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-tile-top">
+        <span class="stat-tile-lbl">Approved Passes</span>
+        <span class="badge b-good">Authorized</span>
+      </div>
+      <div class="stat-tile-val">${approvedCount}</div>
+      <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">Valid for Entry Today</div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-tile-top">
+        <span class="stat-tile-lbl">Currently On Campus</span>
+        <span class="badge b-info">Live Checked-In</span>
+      </div>
+      <div class="stat-tile-val" style="color:var(--uni-orange);">${checkedInCount}</div>
+      <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">Inside University Perimeter</div>
+    </div>
+
+    <div class="stat-tile">
+      <div class="stat-tile-top">
+        <span class="stat-tile-lbl">Total Logged Passes</span>
+        <span class="badge b-info">Master Registry</span>
+      </div>
+      <div class="stat-tile-val">${all.length}</div>
+      <div style="font-size:11px; color:var(--ink-dim); margin-top:2px;">All-Time Records</div>
+    </div>
+  </div>
+
+  <!-- Filter Tab Bar -->
+  <div class="tabbar">
+    <button class="${adminVisitorFilter==='all'?'active':''}" onclick="setAdminVisitorFilter('all')">All Passes (${all.length})</button>
+    <button class="${adminVisitorFilter==='pending'?'active':''}" onclick="setAdminVisitorFilter('pending')">Pending Approvals (${pendingCount})</button>
+    <button class="${adminVisitorFilter==='approved'?'active':''}" onclick="setAdminVisitorFilter('approved')">Approved &amp; Active (${approvedCount})</button>
+    <button class="${adminVisitorFilter==='checkedin'?'active':''}" onclick="setAdminVisitorFilter('checkedin')">On-Campus Guests (${checkedInCount})</button>
+    <button class="${adminVisitorFilter==='rejected'?'active':''}" onclick="setAdminVisitorFilter('rejected')">Rejected (${rejectedCount})</button>
+  </div>
+
+  <!-- Master Visitors Table -->
   <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <b style="font-size:14.5px; color:var(--uni-navy);">Visitor Entry Passes &amp; Security Verification Roster</b>
+      <span class="badge b-info">${list.length} Records</span>
+    </div>
     <table>
-      <thead><tr><th>Visitor</th><th>Purpose</th><th>Host</th><th>Status</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Visitor Name &amp; Phone</th>
+          <th>Purpose &amp; Category</th>
+          <th>Host Person &amp; Role</th>
+          <th>Date, Time &amp; Gate</th>
+          <th>Status</th>
+          <th style="text-align:right;">Security Actions</th>
+        </tr>
+      </thead>
       <tbody>
-        ${DB.visitors.map(v => `<tr><td><b>${v.name}</b></td><td>${v.purpose}</td><td>${v.hostBy}</td><td><span class="badge b-good">${v.status}</span></td></tr>`).join('')}
+        ${list.length > 0 ? list.map(v => {
+          const isPending = v.status === 'Pending Approval';
+          const isApproved = v.status === 'Approved';
+          const isCheckedIn = v.status === 'Checked-In';
+          return `
+          <tr>
+            <td>
+              <b>${v.name}</b>
+              <div class="mono" style="font-size:11px; color:var(--uni-orange);">${v.phone || '+91 98401 00000'}</div>
+            </td>
+            <td>
+              <b>${v.purpose}</b>
+              <div style="font-size:11px; color:var(--ink-dim);">${v.category || 'General Guest'}</div>
+            </td>
+            <td>
+              <b>${v.hostBy}</b>
+            </td>
+            <td>
+              <div style="font-weight:700; color:var(--uni-navy);">${v.date || 'Today'} ${v.time||''}</div>
+              <span class="badge b-info" style="font-size:10px; margin-top:2px;">${v.gate || 'Main Gate 1'}</span>
+            </td>
+            <td>
+              <span class="badge ${isPending?'b-warn':isApproved?'b-good':isCheckedIn?'b-info':'b-bad'}">${v.status}</span>
+              ${v.checkInTime ? `<div style="font-size:10px; color:var(--good); font-weight:700; margin-top:2px;">Entry: ${v.checkInTime}</div>` : ''}
+              ${v.approvedBy ? `<div style="font-size:10px; color:var(--ink-dim); margin-top:2px;">By: ${v.approvedBy}</div>` : ''}
+            </td>
+            <td style="text-align:right;">
+              <div style="display:flex; gap:5px; justify-content:flex-end; flex-wrap:wrap;">
+                ${isPending ? `
+                  <button class="btn btn-sm btn-p" style="background:var(--good); color:#fff; padding:3px 8px; font-size:11px;" onclick="approveVisitorPass('${v.id}')">
+                    Approve
+                  </button>
+                  <button class="btn btn-sm btn-ghost" style="color:var(--danger); padding:3px 8px; font-size:11px;" onclick="rejectVisitorPass('${v.id}')">
+                    Reject
+                  </button>
+                ` : isApproved ? `
+                  <button class="btn btn-sm btn-p" style="background:#2563eb; color:#fff; padding:3px 8px; font-size:11px;" onclick="checkInVisitorPass('${v.id}')">
+                    Mark Entry
+                  </button>
+                  <button class="btn btn-sm btn-ghost" style="color:var(--danger); padding:3px 8px; font-size:11px;" onclick="rejectVisitorPass('${v.id}')">
+                    Revoke
+                  </button>
+                ` : isCheckedIn ? `
+                  <button class="btn btn-sm btn-ghost" style="padding:3px 8px; font-size:11px;" onclick="checkOutVisitorPass('${v.id}')">
+                    Mark Exit
+                  </button>
+                ` : `
+                  <button class="btn btn-sm btn-ghost" style="padding:3px 8px; font-size:11px;" onclick="approveVisitorPass('${v.id}')">
+                    Re-Approve
+                  </button>
+                `}
+                <button class="btn btn-sm btn-ghost" style="color:var(--danger); padding:3px 6px; font-size:11px;" onclick="deleteVisitorPass('${v.id}')" title="Delete Pass">
+                  Delete
+                </button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('') : `
+          <tr>
+            <td colspan="6" style="text-align:center; padding:24px; color:var(--ink-dim);">No visitor passes found for the selected filter.</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function approveVisitorPass(id){
+  const v = (DB.visitors || []).find(x => x.id === id);
+  if(v){
+    v.status = 'Approved';
+    v.approvedBy = appState.user ? `${appState.user.name} (Admin)` : 'Dean of Operations';
+    saveToSupabase();
+    toast(`Visitor pass for ${v.name} approved! Entry authorized ✓`, 'good');
+    renderApp();
+  }
+}
+
+function rejectVisitorPass(id){
+  const v = (DB.visitors || []).find(x => x.id === id);
+  if(v){
+    v.status = 'Rejected';
+    saveToSupabase();
+    toast(`Visitor pass for ${v.name} rejected / revoked.`, 'danger');
+    renderApp();
+  }
+}
+
+function checkInVisitorPass(id){
+  const v = (DB.visitors || []).find(x => x.id === id);
+  if(v){
+    v.status = 'Checked-In';
+    v.checkInTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    saveToSupabase();
+    toast(`${v.name} marked as Checked-In at ${v.gate || 'Main Gate 1'} ✓`, 'good');
+    renderApp();
+  }
+}
+
+function checkOutVisitorPass(id){
+  const v = (DB.visitors || []).find(x => x.id === id);
+  if(v){
+    v.status = 'Completed (Exited)';
+    v.checkOutTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    saveToSupabase();
+    toast(`${v.name} exit checkout recorded.`, 'good');
+    renderApp();
+  }
+}
+
+function deleteVisitorPass(id){
+  const v = (DB.visitors || []).find(x => x.id === id);
+  if(v && confirm(`Are you sure you want to delete the visitor pass record for ${v.name}?`)){
+    DB.visitors = (DB.visitors || []).filter(x => x.id !== id);
+    saveToSupabase();
+    toast(`Visitor pass record removed`, 'good');
+    renderApp();
+  }
+}
+
+function openAdminIssueGatePassModal(){
+  document.getElementById('form-modal-body').innerHTML = `
+    <h3 style="color:var(--uni-navy);">Issue Official Campus Security Gate Pass</h3>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-row"><label>Visitor Full Name</label><input id="adm-vis-name" placeholder="e.g. Dr. K. S. Murthy"></div>
+      <div class="form-row"><label>Visitor Mobile Number</label><input id="adm-vis-phone" placeholder="+91 98401 88200"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="form-row"><label>Visit Category</label><select id="adm-vis-cat"><option>Parent / Guardian Consultation</option><option>VIP / Distinguished Guest Speaker</option><option>Academic Inspection &amp; Audit</option><option>Vendor / Campus Maintenance</option></select></div>
+      <div class="form-row"><label>Assigned Entry Gate</label><select id="adm-vis-gate"><option>Main Gate 1 (Rotunda)</option><option>Gate 2 (Technology Tower)</option><option>North Gate 3 (Residential Hostels)</option><option>Service Gate 4</option></select></div>
+    </div>
+    <div class="form-row"><label>Host Person / Department</label><input id="adm-vis-host" value="Dean of Operations (Administration)"></div>
+    <div class="form-row"><label>Detailed Purpose</label><input id="adm-vis-purp" placeholder="e.g. Keynote address for Innovation Summit 2026"></div>
+    <div class="form-row"><label>Date &amp; Time Window</label><input id="adm-vis-dt" type="datetime-local"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button><button class="btn btn-accent" onclick="submitAdminIssueGatePass()">Authorize &amp; Issue Pass</button></div>
+  `;
+  openModal('form-modal');
+}
+
+function submitAdminIssueGatePass(){
+  const name = document.getElementById('adm-vis-name').value.trim();
+  const phone = document.getElementById('adm-vis-phone').value.trim() || '+91 98401 00000';
+  const cat = document.getElementById('adm-vis-cat').value;
+  const gate = document.getElementById('adm-vis-gate').value;
+  const host = document.getElementById('adm-vis-host').value.trim() || 'Dean of Operations';
+  const purp = document.getElementById('adm-vis-purp').value.trim();
+  const dtVal = document.getElementById('adm-vis-dt').value;
+
+  if(!name || !purp){ toast('Please fill in visitor name and purpose.', 'danger'); return; }
+
+  const newPass = {
+    id: 'VIS-' + Math.floor(100 + Math.random()*900),
+    name,
+    phone,
+    category: cat,
+    gate,
+    hostBy: host,
+    purpose: purp,
+    date: dtVal ? dtVal.split('T')[0] : new Date().toISOString().split('T')[0],
+    time: dtVal && dtVal.includes('T') ? dtVal.split('T')[1] : '10:00 AM',
+    status: 'Approved',
+    approvedBy: `${appState.user.name} (Admin)`
+  };
+
+  DB.visitors = DB.visitors || [];
+  DB.visitors.unshift(newPass);
+  saveToSupabase();
+  closeModal('form-modal');
+  toast(`Official gate pass issued for ${name} (${gate}) ✓`, 'good');
+  renderApp();
+}
+
+function visitorView(isAdmin){
+  if(isAdmin) return adminVisitorsView();
+
+  const myVisitors = (DB.visitors || []).filter(v => v.hostBy && (v.hostBy.includes(appState.user.name) || v.hostBy.includes(appState.user.id)));
+  const allVisitors = DB.visitors || [];
+
+  return `
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+    <div>
+      <b style="font-size:16px; color:var(--uni-navy);">Campus Visitor Pass &amp; Gate Entry Management</b>
+      <div style="font-size:12px; color:var(--ink-dim);">Request official security passes for visiting parents, guardians, guest speakers, or academic consultants.</div>
+    </div>
+    <button class="btn btn-sm btn-accent" onclick="openVisitorModal()">+ Request Campus Visitor Pass</button>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <b style="font-size:14.5px; color:var(--uni-navy);">Your Requested Visitor Passes</b>
+      <span class="badge b-info">${myVisitors.length} Pass${myVisitors.length===1?'':'es'}</span>
+    </div>
+    <table>
+      <thead><tr><th>Visitor Name &amp; Phone</th><th>Purpose</th><th>Scheduled Date &amp; Time</th><th>Assigned Gate</th><th>Approval Status</th></tr></thead>
+      <tbody>
+        ${myVisitors.length > 0 ? myVisitors.map(v => `
+          <tr>
+            <td>
+              <b>${v.name}</b>
+              <div class="mono" style="font-size:11px; color:var(--uni-orange);">${v.phone||'+91 98401 00000'}</div>
+            </td>
+            <td>${v.purpose}</td>
+            <td><b>${v.date || 'Today'}</b> <span style="font-size:11px; color:var(--ink-dim);">${v.time||''}</span></td>
+            <td><span class="badge b-info">${v.gate || 'Main Gate 1'}</span></td>
+            <td>
+              <span class="badge ${v.status==='Pending Approval'?'b-warn':v.status==='Approved'?'b-good':v.status==='Checked-In'?'b-info':'b-bad'}">${v.status}</span>
+            </td>
+          </tr>
+        `).join('') : `
+          <tr>
+            <td colspan="5" style="text-align:center; padding:18px; color:var(--ink-dim);">You have not submitted any visitor pass requests. Click "+ Request Campus Visitor Pass" to create one.</td>
+          </tr>
+        `}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <b style="font-size:14.5px; color:var(--uni-navy);">Recent Campus Security Entry Log</b>
+      <span class="badge b-good">Security Gates Active</span>
+    </div>
+    <table>
+      <thead><tr><th>Visitor</th><th>Purpose</th><th>Host</th><th>Date &amp; Gate</th><th>Status</th></tr></thead>
+      <tbody>
+        ${allVisitors.slice(0, 6).map(v => `
+          <tr>
+            <td><b>${v.name}</b></td>
+            <td>${v.purpose}</td>
+            <td>${v.hostBy}</td>
+            <td>${v.date||'Today'} · <span class="mono">${v.gate||'Gate 1'}</span></td>
+            <td><span class="badge ${v.status==='Pending Approval'?'b-warn':v.status==='Approved'?'b-good':v.status==='Checked-In'?'b-info':'b-bad'}">${v.status}</span></td>
+          </tr>
+        `).join('')}
       </tbody>
     </table>
   </div>`;
@@ -7561,23 +8595,43 @@ function visitorView(isAdmin){
 
 function openVisitorModal(){
   document.getElementById('form-modal-body').innerHTML = `
-    <h3>Request Campus Visitor Pass</h3>
+    <h3 style="color:var(--uni-navy);">Request Campus Visitor Security Pass</h3>
+    <p style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;">Pass requests are reviewed and authorized by the University Security Directorate.</p>
     <div class="form-row"><label>Visitor Full Name</label><input id="vis-name" placeholder="e.g. Mr. Rajesh Sharma"></div>
-    <div class="form-row"><label>Purpose</label><input id="vis-purp" placeholder="e.g. Parent Consultation"></div>
-    <div class="form-row"><label>Date &amp; Time</label><input id="vis-dt" type="datetime-local"></div>
-    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button><button class="btn btn-accent" onclick="submitVisitorPass()">Issue Pass</button></div>
+    <div class="form-row"><label>Visitor Mobile Phone</label><input id="vis-phone" placeholder="+91 98401 23456"></div>
+    <div class="form-row"><label>Purpose of Visit</label><input id="vis-purp" placeholder="e.g. Parent Consultation / Academic Visit"></div>
+    <div class="form-row"><label>Preferred Entry Gate</label><select id="vis-gate"><option>Main Gate 1 (Rotunda)</option><option>Gate 2 (Technology Tower)</option><option>North Gate 3 (Residential Hostels)</option></select></div>
+    <div class="form-row"><label>Expected Date &amp; Arrival Time</label><input id="vis-dt" type="datetime-local"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeModal('form-modal')">Cancel</button><button class="btn btn-accent" onclick="submitVisitorPass()">Submit for Admin Approval</button></div>
   `;
   openModal('form-modal');
 }
+
 function submitVisitorPass(){
   const name = document.getElementById('vis-name').value.trim();
+  const phone = document.getElementById('vis-phone').value.trim() || '+91 98401 00000';
   const purp = document.getElementById('vis-purp').value.trim();
+  const gate = document.getElementById('vis-gate').value;
+  const dtVal = document.getElementById('vis-dt').value;
+
   if(!name || !purp){ toast('Please fill in visitor details.', 'danger'); return; }
-  DB.visitors.push({ id:cid(), name, purpose:purp, hostBy:`${appState.user.name} (${appState.role})`, status:'Approved' });
+
+  DB.visitors = DB.visitors || [];
+  DB.visitors.unshift({
+    id: 'VIS-' + Math.floor(100 + Math.random()*900),
+    name,
+    phone,
+    purpose: purp,
+    gate,
+    hostBy: `${appState.user.name} (${appState.role === 'student' ? 'Student - ' + appState.user.id : appState.role})`,
+    date: dtVal ? dtVal.split('T')[0] : new Date().toISOString().split('T')[0],
+    time: dtVal && dtVal.includes('T') ? dtVal.split('T')[1] : '11:00 AM',
+    status: 'Pending Approval'
+  });
   saveToSupabase();
   closeModal('form-modal');
-  toast('Visitor pass generated & approved ✓', 'good');
-  renderCurrentPage();
+  toast('Visitor pass request submitted for Admin approval ✓', 'good');
+  renderApp();
 }
 
 let sosHoldInterval = null;
@@ -7660,27 +8714,57 @@ function triggerQuick2sSos(){
 function completeSosDispatch(){
   const loc = getSelectedSosLocation();
   const nature = getSelectedSosNature();
-  const u = appState.user || DB.students[0];
+  const role = appState.role || 'student';
+  const u = appState.user || (role === 'employee' ? DB.teachers[0] : DB.students[0]);
 
-  const alertObj = {
-    id: cid(),
-    type: 'Priority SOS',
-    studentId: u.id,
-    name: u.name,
-    role: appState.role || 'student',
-    phone: u.phone || '+91 98401 10011',
-    dept: u.dept || 'Computer Science & Engineering',
-    sem: u.sem || 3,
-    section: u.section || 'A',
-    hostel: u.hostel || "Men's Residential Hostel (B-Block)",
-    room: u.room || "Room B-304",
-    parents: u.parents || DB.students[0].parents,
-    emergencyNature: nature,
-    location: loc,
-    time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-    timestamp: Date.now(),
-    status: 'Active'
-  };
+  let alertObj;
+  if(role === 'employee'){
+    alertObj = {
+      id: cid(),
+      type: 'Priority SOS',
+      role: 'employee',
+      employeeId: u.id || 'EMP101',
+      name: (u.title ? u.title + ' ' : '') + u.name,
+      phone: u.phone || '+91 98401 90101 (Ext: 2101)',
+      dept: u.dept || 'Computer Science & Engineering',
+      subject: u.subject || 'Data Structures & Algorithms',
+      cabin: u.cabin || 'Technology Tower (TT)',
+      room: u.room || 'Room TT-210',
+      landmark: u.landmark || 'Adjacent to VLSI CAD Synthesis Lab 3, nearest to Elevator B',
+      emergencyNature: nature,
+      location: loc,
+      time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+      timestamp: Date.now(),
+      status: 'Active'
+    };
+  } else {
+    const studentIdx = DB.students.findIndex(st => st.id === u.id);
+    const gender = u.gender || (studentIdx >= 0 ? STUDENT_GENDERS[studentIdx] : 'male');
+    const isFemale = gender === 'female' || (u.hostel && u.hostel.toLowerCase().includes('women'));
+    const defaultHostel = isFemale ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)";
+    const defaultRoom = isFemale ? "Room G-208" : "Room B-304";
+
+    alertObj = {
+      id: cid(),
+      type: 'Priority SOS',
+      role: 'student',
+      studentId: u.id || '25bce1001',
+      name: u.name,
+      gender: isFemale ? 'female' : 'male',
+      phone: u.phone || '+91 98401 10011',
+      dept: u.dept || 'Computer Science & Engineering',
+      sem: u.sem || 3,
+      section: u.section || 'A',
+      hostel: u.hostel || defaultHostel,
+      room: u.room || defaultRoom,
+      parents: u.parents || DB.students[0].parents,
+      emergencyNature: nature,
+      location: loc,
+      time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+      timestamp: Date.now(),
+      status: 'Active'
+    };
+  }
 
   DB.alerts = DB.alerts || [];
   DB.alerts.unshift(alertObj);
