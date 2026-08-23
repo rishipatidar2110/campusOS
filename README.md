@@ -140,6 +140,17 @@ sequenceDiagram
 ```
 
 ### ⚡ Role-Tailored Prompt Chips & Diagnostic Capabilities
+- **For Administrator (`Admin AI Operations Copilot`)**:
+  - *"Are there any active emergency SOS alerts on campus right now?"* → Reports live active emergency alerts with student/faculty details, locations, and direct phone contacts.
+  - *"How many student complaints and grievances are pending?"* → Summarizes open grievance cases with category, submitter info, description, and status.
+  - *"Are there any visitor passes pending for administrative approval?"* → Checks authorization queues with visitor names, purpose, host details, and requested gates.
+  - *"Show me an overview and academic health of all students"* → Comprehensive overview of total enrollment, average CGPA, top achievers, debarment shortages, and individual student profile lookups.
+  - *"Which students have attendance debarment shortages (<75%)?"* → Identifies students in danger of exam debarment with their hostel rooms and guardian phone numbers.
+  - *"List all female students and their hostel block rooms"* → Displays female students, their **Women's Residential Hostel (G-Block)** room numbers, CGPA, and parents' contacts.
+  - *"How many faculty members are currently in their cabins?"* → Real-time tally of faculty currently in their physical cabins vs out of cabin with workstation locations and extensions.
+  - *"What are the latest confidential campus incident reports?"* → Live review of monitored campus safety incidents with 7-day retention countdowns.
+  - *"Are there pending debarment exemption or medical OD petitions?"* → Queue of pending student medical OD claims with attached proofs.
+  - *"Summarize institutional fee collection & facility revenues"* → Financial audit of tuition collection rates and facility subscription revenues.
 - **For Faculty (`Faculty AI Academic Copilot`)**:
   - *"Which students have attendance below 75% in my course?"* → Flags at-risk students (e.g. *Rohan Gupta at 68%*) with debarment warnings.
   - *"Which students are performing best in academics?"* → Highlights top academic performers (e.g. *Diya Patel 94/100, Ishita Verma 91/100, Aarav Sharma 88/100*).
@@ -148,8 +159,9 @@ sequenceDiagram
   - *"List all female students in my course for hostel mentoring"* → Displays female students, their **Women's Residential Hostel (G-Block)** rooms, and academic standing.
 - **For Students (`University AI Mentor`)**:
   - Theory & Lab attendance breakdown, exam schedules, study strategies, faculty cabin availability, placement drive advice, and stress-reduction techniques.
-- **Session Auto-Reset**:
+- **Session Auto-Reset & Confirmation**:
   - The AI chat history automatically resets upon every login or logout, ensuring private, fresh, role-specific sessions.
+  - Interactive **Logout Confirmation Modal** prevents accidental session terminations across all user portals.
 
 ---
 

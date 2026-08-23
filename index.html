@@ -2578,6 +2578,34 @@ function performLogin(){
 }
 
 function performLogout(){
+  openLogoutConfirmModal();
+}
+
+function openLogoutConfirmModal(){
+  document.getElementById('form-modal-body').innerHTML = `
+    <div style="text-align:center; padding:10px 4px;">
+      <div style="width:54px; height:54px; border-radius:50%; background:#fef2f2; color:#ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;">
+        <svg class="svg-ic-lg" viewBox="0 0 24 24" style="stroke:#ef4444; width:28px; height:28px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </div>
+      <h3 style="color:var(--uni-navy); font-size:18px; font-weight:800; margin-bottom:6px;">Confirm Sign Out</h3>
+      <p style="font-size:13px; color:var(--ink-dim); margin-bottom:20px; line-height:1.5;">
+        Are you sure you want to log out of <b>CampusOS</b>? Your active session will be ended securely.
+      </p>
+      <div class="modal-actions" style="margin-top:10px; display:flex; gap:10px;">
+        <button type="button" class="btn btn-ghost" style="flex:1; padding:9px; font-weight:700;" onclick="closeModal('form-modal')">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-accent" style="flex:1; padding:9px; font-weight:700; background:#dc2626;" onclick="confirmPerformLogout()">
+          Yes, Log Out
+        </button>
+      </div>
+    </div>
+  `;
+  openModal('form-modal');
+}
+
+function confirmPerformLogout(){
+  closeModal('form-modal');
   appState = { role:null, user:null, page:'home' };
   aiMentorHistory = []; // Reset AI Mentor conversation history on logout
   stopBusSim();
@@ -2590,6 +2618,7 @@ function performLogout(){
   document.getElementById('login-pw').classList.remove('filled');
   switchRole(activeRole);
   showPublicSection('home');
+  toast('You have been logged out successfully.', 'info');
 }
 
 /* =========================================================================
@@ -2651,6 +2680,7 @@ const ADMIN_NAVIGATION = [
   { group:'Operations Control', items:[
     {k:'ahome', l:'Control Center', icon:'admin'},
     {k:'aalerts', l:'Emergency SOS Alerts', icon:'alert'},
+    {k:'aimentor', l:'Admin AI Operations Hub', icon:'ai'},
     {k:'avisitors', l:'Visitor Pass Approvals', icon:'ticket'},
     {k:'bustracking', l:'Fleet & Bus Radar', icon:'bus'},
     {k:'aincidents', l:'Incident Reports', icon:'shield'},
@@ -5248,14 +5278,18 @@ const FACULTY_AI_QUESTIONS = [
 ];
 
 const ADMIN_AI_QUESTIONS = [
-  "What is the current campus security and SOS emergency status?",
-  "How many active student complaints and grievances are pending?",
-  "Summary of student and faculty headcount roster",
-  "How do I broadcast an administrative directive?",
-  "What is the live status of campus shuttle buses?",
-  "Are there pending visitor pass requests for authorization?",
+  "Are there any active emergency SOS alerts on campus right now?",
+  "How many student complaints and grievances are pending?",
+  "Are there any visitor passes pending for administrative approval?",
+  "Show me an overview and academic health of all students",
+  "Which students have attendance debarment shortages (<75%)?",
+  "List all female students and their hostel block rooms",
+  "How many faculty members are currently in their cabins?",
+  "What are the latest confidential campus incident reports?",
+  "Are there pending debarment exemption or medical OD petitions?",
   "What are the upcoming hosted semester examination dates?",
-  "Show me the institutional NAAC & NIRF accreditations"
+  "How do I broadcast an official administrative directive to portals?",
+  "Summarize institutional fee collection & facility revenues"
 ];
 
 let aiMentorHistory = [];
@@ -5273,7 +5307,7 @@ function aiMentorView(){
     const myCourse = (DB.courses && DB.courses.find(c => c.teacherId === u.id)) || (DB.courses ? DB.courses[0] : {code:'CSE2001', name:'Data Structures & Algorithms'});
     initialGreeting = `Good day, ${u.title || 'Dr.'} ${u.name.split(' ')[0]}! I am your Faculty AI Academic Copilot. I have real-time access to student performance, attendance rosters, and marks records for ${myCourse.code} (${myCourse.name}). Ask me about students with low attendance (<75%), who is performing best vs struggling in academics, or tap any prompt below!`;
   } else if(isAdmin){
-    initialGreeting = `Greetings, ${u.name}! I am the CampusOS Administrative Command Copilot. I monitor live SOS alerts, campus security, student grievances, fleet tracking, and curriculum operations. How may I assist you today?`;
+    initialGreeting = `Greetings, ${u.name}! I am your CampusOS Administrative Operations Copilot. I monitor live SOS emergencies, pending student grievances, visitor pass authorization queues, student body academic health, faculty presence, and financial audits. Tap any prompt below or ask me anything!`;
   }
 
   return `
@@ -5283,8 +5317,8 @@ function aiMentorView(){
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
       </div>
       <div>
-        <b style="font-size:13.5px; color:var(--uni-navy);">${isFaculty ? 'Faculty AI Academic & Performance Copilot' : (isAdmin ? 'CampusOS Administrative Operations AI' : 'CampusOS University AI Mentor')}</b>
-        <div style="font-size:11px; color:var(--ink-dim);">${isFaculty ? 'Grounded on live student rosters, course attendance & semester marks' : 'Emotionally intelligent & grounded on live university records'}</div>
+        <b style="font-size:13.5px; color:var(--uni-navy);">${isFaculty ? 'Faculty AI Academic & Performance Copilot' : (isAdmin ? 'CampusOS Administrative Operations AI Copilot' : 'CampusOS University AI Mentor')}</b>
+        <div style="font-size:11px; color:var(--ink-dim);">${isFaculty ? 'Grounded on live student rosters, course attendance & semester marks' : (isAdmin ? 'Grounded on live SOS alarms, grievances, visitor passes & student records' : 'Emotionally intelligent & grounded on live university records')}</div>
       </div>
     </div>
 
@@ -5296,7 +5330,7 @@ function aiMentorView(){
 
     <!-- Quick Interactive Question Chips -->
     <div class="ai-chips-wrapper">
-      <div class="ai-chips-title">${isFaculty ? '⚡ Faculty AI Insights & Diagnostic Prompts:' : 'Tap Any Question to Ask Instantly:'}</div>
+      <div class="ai-chips-title">${isFaculty ? '⚡ Faculty AI Insights & Diagnostic Prompts:' : (isAdmin ? '⚡ Administrative Operations Command Prompts:' : 'Tap Any Question to Ask Instantly:')}</div>
       <div class="ai-chips-grid">
         ${chips.map(q => `
           <button type="button" class="ai-chip" onclick="askAIMentor('${q.replace(/'/g, "\\'")}')">${q}</button>
@@ -5305,7 +5339,7 @@ function aiMentorView(){
     </div>
 
     <div class="ai-input-row">
-      <input id="ai-user-query" placeholder="${isFaculty ? 'Ask about student marks, attendance <75%, top performers, or advisories...' : 'Ask your university mentor anything or share how you feel...'}" onkeydown="if(event.key==='Enter') askAIMentor()">
+      <input id="ai-user-query" placeholder="${isFaculty ? 'Ask about student marks, attendance <75%, top performers, or advisories...' : (isAdmin ? 'Ask about SOS alerts, pending complaints, visitor passes, student roster...' : 'Ask your university mentor anything or share how you feel...')}" onkeydown="if(event.key==='Enter') askAIMentor()">
       <button class="ai-send" onclick="askAIMentor()">
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
@@ -5551,20 +5585,240 @@ async function askAIMentor(preset){
       ans = `You can request official campus visitor passes for visiting parents or guests from the 'Visitor Pass Management' section in your sidebar. Admin will review and authorize gate access.`;
     }
   }
-  // Admin Operations & SOS Status Query
-  else if(isAdmin && (lq.includes("security") || lq.includes("sos") || lq.includes("emergency") || lq.includes("grievance") || lq.includes("complaint") || lq.includes("directive"))){
+  // ==========================================
+  // ADMIN-SPECIFIC DIAGNOSTIC AI PROMPTS
+  // ==========================================
+  // 1. Active Emergency SOS Alarms
+  else if(isAdmin && (lq.includes("sos") || lq.includes("emergency") || lq.includes("alert") || lq.includes("security status") || lq.includes("alarm"))){
     const activeAlerts = (DB.alerts || []).filter(a => a.status === 'Active');
-    const openComplaints = (DB.complaints || []).filter(c => c.status === 'Open').length;
-    ans = `🛡️ Campus Administrative & Security Briefing:\n` +
-      `• Active SOS Emergency Alerts: ${activeAlerts.length} (${activeAlerts.length > 0 ? '🚨 Priority Action Required' : '✅ Campus Green / Normal'})\n` +
-      `• Pending Student Grievances: ${openComplaints} Open Cases\n` +
-      `• Active Enrolled Students: ${DB.students.length} | Faculty Staff: ${DB.teachers.length}\n` +
-      `• Broadcast Directives: ${(DB.adminDirectives || []).length} Notices Active across Student Portals.`;
+    const resolvedAlerts = (DB.alerts || []).filter(a => a.status !== 'Active');
+    if(activeAlerts.length > 0){
+      ans = `🚨 ACTIVE SOS EMERGENCY ALERTS (${activeAlerts.length} Active Urgent Cases):\n\n` +
+        activeAlerts.map((a, idx) => {
+          const isFac = a.role === 'employee' || !!a.employeeId;
+          const isFem = !isFac && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+          return `[Alert #${idx+1} · ID: ${a.id}] — Priority: IMMEDIATE ACTION REQUIRED\n` +
+            `• Initiator: ${a.name} (${isFac ? 'Faculty Staff · ' + (a.employeeId||'EMP101') : (isFem ? 'Female Student · ' : 'Male Student · ') + (a.studentId||'')})\n` +
+            `• Emergency Category: ${a.emergencyNature || 'Emergency Assistance'}\n` +
+            `• Incident Location: ${a.location}\n` +
+            `• Residence / Workplace: ${isFac ? (a.cabin||'Technology Tower (TT)') + ', ' + (a.room||'Room TT-210') : (a.hostel || (isFem ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)")) + ' (' + (a.room||'') + ')'}\n` +
+            `• Direct Phone: ${a.phone}\n` +
+            (a.parents ? `• Guardian Contact: Father ${a.parents.father.name} (${a.parents.father.phone}) · Mother ${a.parents.mother.name} (${a.parents.mother.phone})\n` : '') +
+            `• Dispatched At: ${a.time}`;
+        }).join('\n\n') +
+        `\n\n👉 Recommended Action: Navigate to the 'Emergency SOS Alerts' tab in your sidebar to review the full contact dossier, dial emergency contacts, or dispatch campus patrol guards.`;
+    } else {
+      ans = `✅ Campus Emergency Security Status: GREEN / NORMAL\n\n` +
+        `• Active SOS Emergencies: 0 Active Alerts across campus grounds\n` +
+        `• Historical Alerts on Record: ${DB.alerts.length} (${resolvedAlerts.length} Successfully Resolved & Archived)\n` +
+        `• Campus Patrol Units: 3 Mobile Guard Patrols Active\n` +
+        `• Perimeter Gate Checkposts: Main Gate 1, Gate 2 (Tech Tower), Gate 4 (Residential) Operational\n` +
+        `• Any emergency triggered by students or faculty will appear instantly in your top Control Center banner.`;
+    }
+  }
+  // 2. Pending Student Grievances & Complaints
+  else if(isAdmin && (lq.includes("complaint") || lq.includes("grievance") || lq.includes("ticket") || lq.includes("issue"))){
+    const openComplaints = (DB.complaints || []).filter(c => c.status === 'Open');
+    const resolvedComplaints = (DB.complaints || []).filter(c => c.status !== 'Open');
+    if(openComplaints.length > 0){
+      ans = `📋 Pending Student & Faculty Grievances (${openComplaints.length} Open Cases):\n\n` +
+        openComplaints.map((c, idx) => {
+          return `${idx+1}. [${c.category.toUpperCase()}] Case ID: ${c.id}\n` +
+            `   • Submitter: ${c.from} (${c.role === 'student' ? 'Student' : 'Faculty'})\n` +
+            `   • Issue Description: "${c.desc}"\n` +
+            `   • Time Filed: ${c.time || 'Recent'} · Status: ⚠️ Open`;
+        }).join('\n\n') +
+        `\n\n• Resolved & Archived Grievances: ${resolvedComplaints.length} Cases\n` +
+        `👉 Action Directive: Navigate to the 'Complaints Directorate' tab. You can mark cases resolved, and administrators now have full permissions to permanently delete or archive resolved complaints.`;
+    } else {
+      ans = `✅ All Grievances Clean & Resolved!\n\n` +
+        `• Pending Open Grievances: 0 Cases\n` +
+        `• Total Historical Resolved Grievances: ${resolvedComplaints.length} Archived Cases\n` +
+        `• Any new complaint submitted by students or teachers will appear immediately in your 'Complaints Directorate' feed.`;
+    }
+  }
+  // 3. Pending Visitor Passes
+  else if(isAdmin && (lq.includes("visitor") || lq.includes("guest") || lq.includes("gate pass") || lq.includes("entry pass"))){
+    const pendingVisitors = (DB.visitors || []).filter(v => v.status && v.status.includes('Pending'));
+    const approvedVisitors = (DB.visitors || []).filter(v => v.status === 'Approved' || v.status === 'Checked-In');
+    if(pendingVisitors.length > 0){
+      ans = `🎫 Campus Visitor Pass Authorization Queue (${pendingVisitors.length} Pending Approval):\n\n` +
+        pendingVisitors.map((v, idx) => {
+          return `${idx+1}. [${v.id}] ${v.name} (Mobile: ${v.phone})\n` +
+            `   • Purpose of Visit: ${v.purpose}\n` +
+            `   • Campus Host: ${v.hostBy}\n` +
+            `   • Scheduled Date & Time: ${v.date} at ${v.time}\n` +
+            `   • Requested Entry Gate: ${v.gate || 'Main Gate 1'}\n` +
+            `   • Status: ⏳ Pending Administrator Authorization`;
+        }).join('\n\n') +
+        `\n\n• Total Active / Approved Visitors Today: ${approvedVisitors.length}\n` +
+        `👉 Action Directive: Navigate to 'Visitor Pass Approvals' in your sidebar to authorize or reject gate entry with 1-click.`;
+    } else {
+      ans = `✅ Visitor Pass Queue Clear!\n\n` +
+        `• Pending Passes Awaiting Approval: 0 Requests\n` +
+        `• Active Approved Passes Today: ${approvedVisitors.length} Visitors Authorized\n` +
+        `• Total Passes in Registry: ${DB.visitors.length}\n` +
+        `• All campus security gate barriers are synchronized.`;
+    }
+  }
+  // 4. Female Students & Women's Residential Hostel G-Block
+  else if(isAdmin && (lq.includes("female") || lq.includes("women") || lq.includes("girl") || lq.includes("g-block"))){
+    const females = DB.students.filter(s => s.gender === 'female');
+    ans = `🌸 Female Student Mentoring & Hostel Residency Roster (${females.length} Students):\n\n` +
+      `All female students reside in Women's Residential Hostel (G-Block) equipped with 24x7 biometric access:\n\n` +
+      females.map((s, idx) => {
+        const att = overallAtt(s);
+        const cgpa = computeCGPA(s);
+        return `${idx+1}. ${s.name} (${s.id})\n` +
+          `   • Room: Women's Residential Hostel (G-Block) — ${s.room}\n` +
+          `   • Academic Standing: CGPA ${cgpa} / 10 | Attendance: ${att}%\n` +
+          `   • Student Mobile: ${s.phone}\n` +
+          `   • Father: ${s.parents.father.name} (${s.parents.father.phone})\n` +
+          `   • Mother: ${s.parents.mother.name} (${s.parents.mother.phone})`;
+      }).join('\n\n') +
+      `\n\n👉 Any emergency SOS dispatched by female students is automatically badged with their Women's Hostel G-Block room and guardian emergency contacts in the Admin SOS Monitor.`;
+  }
+  // 5. Faculty Cabin Presence & Directory Status
+  else if(isAdmin && (lq.includes("faculty") || lq.includes("cabin") || lq.includes("presence") || lq.includes("professor") || lq.includes("teacher") || lq.includes("workstation"))){
+    const inCab = DB.teachers.filter(t => t.inCabin);
+    const outCab = DB.teachers.filter(t => !t.inCabin);
+    ans = `🏢 University Faculty Cabin Presence & Directory Status:\n\n` +
+      `• Total Faculty Staff: ${DB.teachers.length} Professors\n` +
+      `• Currently In Cabin (Available to Students): ${inCab.length} Staff (${Math.round(inCab.length/DB.teachers.length*100)}%)\n` +
+      `• Currently Not In Cabin: ${outCab.length} Staff\n\n` +
+      `Live Workstation Locations:\n` +
+      DB.teachers.map(t => {
+        return `• ${t.title} ${t.name} (${t.subject}): ${t.inCabin ? '🟢 IN CABIN' : '⚪ NOT IN CABIN'}\n` +
+          `  - Workstation: ${t.cabin}, ${t.room} (${t.floor||'2nd Floor'})\n` +
+          `  - Proximity Landmark: ${t.landmark || 'Main Academic Wing'}\n` +
+          `  - Consultation Hours: ${t.officeHours}\n` +
+          `  - Direct Ext / Phone: ${t.phone || '+91 98401 90100'}`;
+      }).join('\n\n');
+  }
+  // 6. Debarment Relief & Medical OD Petitions
+  else if(isAdmin && (lq.includes("debar") || lq.includes("od") || lq.includes("medical") || lq.includes("exemption") || lq.includes("petition"))){
+    const pendingOD = (DB.debarExemptionRequests || []).filter(r => r.status && r.status.includes('Pending'));
+    const approvedOD = (DB.debarExemptionRequests || []).filter(r => r.status && !r.status.includes('Pending'));
+    if(pendingOD.length > 0){
+      ans = `🛡️ Debarment Exemption & Medical OD Requests Queue (${pendingOD.length} Pending Review):\n\n` +
+        pendingOD.map((r, idx) => {
+          return `${idx+1}. [${r.id}] ${r.studentName} (${r.studentId})\n` +
+            `   • Course: ${r.subjectName}\n` +
+            `   • Current Attendance: ${r.currentAttendance}% (Below 75% Cutoff)\n` +
+            `   • Claim: ${r.days} Day(s) OD Credit\n` +
+            `   • Exemption Category: ${r.reasonCategory}\n` +
+            `   • Clinical / Event Proof: ${r.fileName || 'Attached Medical Summary'}\n` +
+            `   • Note: "${r.reasonDetails}"`;
+        }).join('\n\n') +
+        `\n\n👉 Head to 'Debar Relief & OD Approvals' in your sidebar to review medical certificates and grant 1-click OD attendance credits.`;
+    } else {
+      ans = `✅ Debarment Relief Queue Clear!\n\n` +
+        `• Pending Medical OD Petitions: 0 Requests\n` +
+        `• Historical Processed Petitions: ${approvedOD.length} Approved / Closed\n` +
+        `• All student attendance records are currently synchronized.`;
+    }
+  }
+  // 7. Confidential Campus Incident Reports
+  else if(isAdmin && (lq.includes("incident") || lq.includes("hazard") || lq.includes("confidential") || lq.includes("report"))){
+    const allInc = DB.incidents || [];
+    const activeInc = allInc.filter(inc => !formatIncidentAge(inc.reportedAt, inc.validDays).isExpired);
+    const purgedInc = allInc.filter(inc => formatIncidentAge(inc.reportedAt, inc.validDays).isExpired);
+    ans = `🚨 Confidential Campus Incident Reports Directorate:\n\n` +
+      `• Active Monitored Incidents: ${activeInc.length} Cases (7-Day Retention Window)\n` +
+      `• Purged / Expired Archive: ${purgedInc.length} Cases\n\n` +
+      (activeInc.length > 0 ? activeInc.map((inc, i) => {
+        const age = formatIncidentAge(inc.reportedAt, inc.validDays);
+        return `${i+1}. [${inc.category}] Status: ${inc.status}\n` +
+          `   • Reported By: ${inc.from} (${inc.role}) · ${inc.time || 'Recent'}\n` +
+          `   • Details: "${inc.desc}"\n` +
+          `   • Retention Countdown: ${age.remainingDays} days remaining (Auto-purge: ${age.expiryDate})`;
+      }).join('\n\n') : '• No active incident reports currently filed.') +
+      `\n\n👉 You can investigate cases and log progress steps from the 'Incident Reports' tab.`;
+  }
+  // 8. Institutional Fee Collections & Financial Audit
+  else if(isAdmin && (lq.includes("fee") || lq.includes("finance") || lq.includes("revenue") || lq.includes("collection") || lq.includes("tuition") || lq.includes("subs"))){
+    const totalTuition = DB.students.reduce((acc, s) => acc + (s.fees ? s.fees.total : 120000), 0);
+    const totalPaid = DB.students.reduce((acc, s) => acc + (s.fees ? s.fees.paid : 0), 0);
+    const totalDue = totalTuition - totalPaid;
+    const paidPct = Math.round((totalPaid / totalTuition) * 100);
+
+    let totalFacRevenue = 0;
+    let totalFacSubs = 0;
+    DB.students.forEach(s => {
+      (s.facilitiesOptIn || []).forEach(fKey => {
+        const fac = (DB.facilities || []).find(f => f.key === fKey);
+        if(fac){ totalFacRevenue += fac.fee; totalFacSubs++; }
+      });
+    });
+
+    ans = `💰 Institutional Financial Audit & Fee Collections Briefing:\n\n` +
+      `• Academic Tuition Collections (Semester 3):\n` +
+      `  - Gross Billed Tuition: ₹${totalTuition.toLocaleString('en-IN')}\n` +
+      `  - Total Collected & Verified: ₹${totalPaid.toLocaleString('en-IN')} (${paidPct}% Collection Rate)\n` +
+      `  - Outstanding Student Balances: ₹${totalDue.toLocaleString('en-IN')} (Due: 15 Sep 2026)\n\n` +
+      `• Sports, Transit & Lab Subscriptions:\n` +
+      `  - Active Facility Access Passes: ${totalFacSubs} Subscriptions\n` +
+      `  - Subscription Revenue Generated: ₹${totalFacRevenue.toLocaleString('en-IN')}\n\n` +
+      `👉 View detailed student-by-student ledger entries in the 'Fee Collections' section.`;
+  }
+  // 9. Broadcast Directives & Announcements
+  else if(isAdmin && (lq.includes("directive") || lq.includes("broadcast") || lq.includes("announcement"))){
+    const dirs = DB.adminDirectives || [];
+    const anns = DB.announcements || [];
+    ans = `📢 Institutional Broadcast Directives & Notice Board:\n\n` +
+      `• Active Administrative Directives (${dirs.length}):\n` +
+      dirs.map(d => `  - "${d.title}": ${d.directive} (Issued: ${d.time || 'Active'})`).join('\n') + `\n\n` +
+      `• Published Campus Announcements (${anns.length}):\n` +
+      anns.map(a => `  - [${a.date}] ${a.title} (by ${a.author})`).join('\n') + `\n\n` +
+      `👉 To broadcast a new real-time directive across all student and teacher dashboards, tap the '+ Broadcast Directive' button on your Control Center.`;
+  }
+  // 10. Student Roster, Academic Health & Specific Student Lookup
+  else if(isAdmin && (lq.includes("student") || lq.includes("roster") || lq.includes("headcount") || lq.includes("academic health") || lq.includes("cgpa") || lq.includes("shortage") || lq.includes("who is") || /aarav|diya|kabir|ishita|rohan|sanya|vivaan|ananya|aditya|priya|25bce\d+/.test(lq))){
+    // Check if looking up a specific student
+    const matchedStudent = DB.students.find(s => lq.includes(s.name.toLowerCase()) || lq.includes(s.name.split(' ')[0].toLowerCase()) || lq.includes(s.id.toLowerCase()));
+    if(matchedStudent){
+      const s = matchedStudent;
+      const cgpa = computeCGPA(s);
+      const att = overallAtt(s);
+      ans = `🎓 Student Record Dossier: ${s.name} (${s.id})\n\n` +
+        `• Department: ${s.dept} · Semester ${s.sem} · Section ${s.section}\n` +
+        `• Academic CGPA: ${cgpa} / 10.0 (${parseFloat(cgpa) >= 9 ? '🌟 Academic Honors' : parseFloat(cgpa) >= 7.5 ? 'Good Standing' : '⚠️ Academic Remedial Advised'})\n` +
+        `• Overall Attendance: ${att}% (${att >= 75 ? '✅ Eligible for Examinations' : '🚨 Debarment Shortage Risk (<75%)'})\n` +
+        `• Hostel Residence: ${s.hostel} (${s.room})\n` +
+        `• Direct Mobile: ${s.phone}\n` +
+        `• Father / Primary Guardian: ${s.parents.father.name} (${s.parents.father.phone})\n` +
+        `• Mother: ${s.parents.mother.name} (${s.parents.mother.phone})\n` +
+        `• Permanent Address: ${s.parents.address}\n` +
+        `• Tuition Fee Status: ₹${s.fees.paid.toLocaleString('en-IN')} paid / ₹${s.fees.total.toLocaleString('en-IN')} total (${s.fees.paid === s.fees.total ? '✅ Settled' : '⚠️ Balance Due ₹' + (s.fees.total - s.fees.paid).toLocaleString('en-IN')})\n` +
+        `• Placement Registration: ${(s.appliedDrives || []).length} Corporate Drives Registered\n` +
+        `• Today's Mood & Wellness: ${s.wellness ? s.wellness.todayMood + ' (Stress: ' + s.wellness.stressLevel + ')' : 'Normal'}`;
+    } else {
+      // General student overview and academic health
+      const totalStudents = DB.students.length;
+      const avgCgpa = (DB.students.reduce((acc, s) => acc + parseFloat(computeCGPA(s)), 0) / totalStudents).toFixed(2);
+      const topAchievers = DB.students.filter(s => parseFloat(computeCGPA(s)) >= 9.0);
+      const lowAtt = DB.students.filter(s => overallAtt(s) < 75);
+      const stressed = DB.students.filter(s => s.wellness && (s.wellness.stressLevel === 'High' || s.wellness.todayMood === 'Stressed'));
+      const females = DB.students.filter(s => s.gender === 'female');
+      const males = DB.students.filter(s => s.gender === 'male');
+
+      ans = `📊 University Student Body & Academic Health Overview:\n\n` +
+        `• Total Enrolled Students: ${totalStudents} (${males.length} Male, ${females.length} Female)\n` +
+        `• Average Institutional CGPA: ${avgCgpa} / 10.0\n\n` +
+        `🌟 Top Academic Achievers (CGPA ≥ 9.0):\n` +
+        topAchievers.map(s => `  - ${s.name} (${s.id}): CGPA ${computeCGPA(s)} | Attendance ${overallAtt(s)}% | ${s.room}`).join('\n') + `\n\n` +
+        `⚠️ Debarment Attendance Shortages (<75% Cutoff):\n` +
+        (lowAtt.length > 0 ? lowAtt.map(s => `  - 🚨 ${s.name} (${s.id}): ${overallAtt(s)}% Attendance (${s.hostel}, ${s.room}) — Guardian: ${s.parents.father.name}`).join('\n') : '  - ✅ No students currently below 75% cutoff.') + `\n\n` +
+        `🧠 Mental Wellbeing Alerts: ${stressed.length} student(s) flagged high stress (${stressed.map(s=>s.name).join(', ') || 'None'}).\n\n` +
+        `💡 Tip: Type any student's name (e.g. "Diya", "Rohan", "Aarav") to view their detailed academic dossier!`;
+    }
   }
   else {
     ans = isFaculty
       ? `I found that in CampusOS Faculty Intelligence! You can tap any of the prompts above or ask about student attendance shortages (<75%), who is performing best vs struggling in academics, or draft parent advisories.`
-      : `I found that in CampusOS! Try tapping any of the question chips above or ask about your attendance, faculty cabin availability, placement drives, or upcoming exams.`;
+      : (isAdmin
+          ? `I found that in CampusOS Administrative Operations Intelligence! You can tap any of the prompts above or ask about active SOS alerts, pending complaints/grievances, visitor pass authorizations, female student rosters, faculty cabin presence, or financial fee audits.`
+          : `I found that in CampusOS! Try tapping any of the question chips above or ask about your attendance, faculty cabin availability, placement drives, or upcoming exams.`);
   }
 
   aiMentorHistory.push({role:'assistant', text:ans});
