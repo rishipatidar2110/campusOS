@@ -945,7 +945,7 @@ function ic(name, cls='svg-ic'){
         <span id="topbar-cloud-text" style="color:var(--ink);">Supabase Synced</span>
       </button>
 
-      <button class="sos-trigger-btn" onclick="openSosDispatchModal()">
+      <button class="sos-trigger-btn" onclick="handleTopbarSosClick()">
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         SOS
       </button>
@@ -6418,7 +6418,7 @@ const adminViews = {
     return `
     <!-- Critical SOS Alert Banner for Admin Main Page -->
     ${activeAlerts.length > 0 ? `
-      <div class="sos-admin-banner">
+      <div class="sos-admin-banner" style="cursor:pointer;" onclick="openSosDossierModal('${activeAlerts[0].id}')" title="Click to open full emergency incident dossier">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
           <div style="display:flex; align-items:center; gap:12px;">
             <div style="width:42px; height:42px; border-radius:50%; background:#ef4444; color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; flex-shrink:0;">
@@ -6431,9 +6431,9 @@ const adminViews = {
               </div>
             </div>
           </div>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px;" onclick="event.stopPropagation()">
             <button class="btn btn-p" style="background:#dc2626;" onclick="openSosDossierModal('${activeAlerts[0].id}')">
-              View SOS Contact Dossier &amp; Location
+              Open Full Dossier &amp; Location
             </button>
             <button class="btn btn-ghost" onclick="navigateToPage('aalerts')">
               All Alerts (${activeAlerts.length})
@@ -6444,7 +6444,7 @@ const adminViews = {
     ` : ''}
 
     <div class="grid g4" style="margin-bottom:16px;">
-      <div class="stat-tile">
+      <div class="stat-tile" style="cursor:pointer;" onclick="navigateToPage('aalerts')" title="Click to view SOS Alert Monitor">
         <div class="stat-tile-top">
           <span class="stat-tile-lbl">Emergency SOS Status</span>
           <span class="badge ${activeAlerts.length>0?'b-bad':'b-good'}">${activeAlerts.length>0?'Action Required':'All Secure'}</span>
@@ -6506,7 +6506,7 @@ const adminViews = {
               const isFaculty = a.role === 'employee' || !!a.employeeId;
               const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
               return `
-              <tr>
+              <tr style="cursor:pointer;" onclick="openSosDossierModal('${a.id}')" title="Click to open full emergency incident dossier">
                 <td>
                   <b>${a.name}</b>
                   <div style="font-size:11px; color:var(--ink-dim);">${a.dept || 'Computer Science & Engineering'}</div>
@@ -6538,9 +6538,9 @@ const adminViews = {
                 </td>
                 <td class="mono"><b>${a.phone || '+91 98401 10011'}</b></td>
                 <td><span class="badge ${a.status==='Active'?'b-bad':'b-good'}">${a.status}</span></td>
-                <td>
+                <td onclick="event.stopPropagation()">
                   <div style="display:flex; gap:5px; align-items:center;">
-                    <button class="btn btn-sm btn-p" style="background:#dc2626; padding:3px 7px; font-size:10.5px;" onclick="openSosDossierModal('${a.id}')">Dossier</button>
+                    <button class="btn btn-sm btn-p" style="background:#dc2626; padding:3px 7px; font-size:10.5px;" onclick="openSosDossierModal('${a.id}')">Open Dossier</button>
                     ${a.status==='Active' ? `
                       <button class="btn btn-sm btn-ghost" style="padding:3px 7px; font-size:10.5px;" onclick="resolveEmergencyAlert('${a.id}')">Resolve</button>
                     ` : `
@@ -6591,7 +6591,7 @@ const adminViews = {
         const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
 
         return `
-        <div class="card" style="border-left:5px solid ${a.status==='Active'?'#ef4444':'var(--good)'};">
+        <div class="card" style="cursor:pointer; border-left:5px solid ${a.status==='Active'?'#ef4444':'var(--good)'};" onclick="openSosDossierModal('${a.id}')" title="Click to open full emergency incident dossier">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
             <div>
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -6629,9 +6629,9 @@ const adminViews = {
               ${a.resolvedBy ? `<div style="font-size:11px; color:var(--good); font-weight:700; margin-top:4px;">Resolved by ${a.resolvedBy} at ${a.resolvedTime}</div>` : ''}
             </div>
 
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;" onclick="event.stopPropagation()">
               <button class="btn btn-sm btn-p" style="background:#dc2626;" onclick="openSosDossierModal('${a.id}')">
-                View Full Dossier
+                Open Full Dossier
               </button>
               ${a.status==='Active' ? `
                 <button class="btn btn-sm btn-ghost" onclick="resolveEmergencyAlert('${a.id}')">
@@ -7849,9 +7849,24 @@ function setAdminAlertsFilter(f){
   renderCurrentPage();
 }
 
+function dispatchPatrolGuard(alertId){
+  const a = (DB.alerts || []).find(x => String(x.id) === String(alertId));
+  const loc = a ? a.location : 'Campus Incident Site';
+  toast('Campus Patrol Team dispatched to ' + loc + ' ✓', 'good');
+}
+
 function openSosDossierModal(alertId){
-  const a = DB.alerts.find(x => x.id === alertId);
-  if(!a) return;
+  let a = null;
+  if(alertId !== undefined && alertId !== null){
+    a = (DB.alerts || []).find(x => String(x.id) === String(alertId));
+  }
+  if(!a && DB.alerts && DB.alerts.length > 0){
+    a = DB.alerts[0];
+  }
+  if(!a){
+    toast('No emergency alert records available.', 'info');
+    return;
+  }
   normalizeAlert(a);
 
   const isFaculty = a.role === 'employee' || !!a.employeeId;
@@ -7859,7 +7874,7 @@ function openSosDossierModal(alertId){
 
   let profileHtml = '';
   if(isFaculty){
-    const f = DB.teachers.find(tch => tch.id === a.employeeId || tch.name === a.name.replace(/^(Dr\.|Prof\.)\s*/,'')) || {
+    const f = (DB.teachers || []).find(tch => tch.id === a.employeeId || tch.name === a.name.replace(/^(Dr\.|Prof\.)\s*/,'')) || {
       name: a.name, title: a.name.startsWith('Dr.') ? 'Dr.' : (a.name.startsWith('Prof.') ? 'Prof.' : ''),
       dept: a.dept || 'Computer Science & Engineering', subject: a.subject || 'Data Structures & Algorithms',
       cabin: a.cabin || 'Technology Tower (TT)', room: a.room || 'Room TT-210', floor: '2nd Floor', wing: 'West Wing',
@@ -7876,12 +7891,12 @@ function openSosDossierModal(alertId){
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
         <div>Name: <b>${a.name}</b></div>
         <div>Employee ID: <b class="mono">${a.employeeId || 'EMP101'}</b></div>
-        <div>Department: <b>${f.dept || a.dept}</b></div>
+        <div>Department: <b>${f.dept || a.dept || 'Computer Science'}</b></div>
         <div>Assigned Course: <b>${f.subject || a.subject || 'Computer Science'}</b></div>
       </div>
       <div style="margin-top:8px; padding-top:6px; border-top:1px solid #bae6fd; display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:12.5px;">Faculty Direct Phone / Ext: <b class="mono" style="color:var(--uni-navy);">${f.phone || a.phone}</b></span>
-        <a href="tel:${(f.phone||a.phone).replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Faculty</a>
+        <a href="tel:${(f.phone||a.phone||'').replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Faculty</a>
       </div>
     </div>
 
@@ -7889,8 +7904,8 @@ function openSosDossierModal(alertId){
     <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; background:#ffffff;">
       <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Official Faculty Cabin &amp; Workspace:</div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
-        <div>Building: <b style="color:var(--uni-navy);">${f.cabin || a.cabin}</b></div>
-        <div>Cabin Chamber: <b class="mono" style="color:var(--uni-orange);">${f.room || a.room}</b></div>
+        <div>Building: <b style="color:var(--uni-navy);">${f.cabin || a.cabin || 'Technology Tower'}</b></div>
+        <div>Cabin Chamber: <b class="mono" style="color:var(--uni-orange);">${f.room || a.room || 'Room TT-210'}</b></div>
         <div>Floor / Wing: <b>${f.floor || '2nd Floor'}, ${f.wing || 'West Wing'}</b></div>
         <div>Email: <span class="mono" style="font-size:11.5px;">${f.email || 'faculty@fox.edu'}</span></div>
       </div>
@@ -7900,7 +7915,7 @@ function openSosDossierModal(alertId){
     </div>
     `;
   } else {
-    const s = DB.students.find(st => st.id === a.studentId || st.name.toLowerCase() === a.name.toLowerCase()) || {
+    const s = (DB.students || []).find(st => st.id === a.studentId || st.name.toLowerCase() === a.name.toLowerCase()) || {
       name: a.name, phone: a.phone || '+91 98401 10011',
       dept: a.dept || 'Computer Science & Engineering', sem: a.sem || 3, section: a.section || 'A',
       hostel: isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)",
@@ -7914,6 +7929,12 @@ function openSosDossierModal(alertId){
     const hostelDisplay = isFemaleStudent ? "Women's Residential Hostel (G-Block)" : (s.hostel || "Men's Residential Hostel (B-Block)");
     const roomDisplay = isFemaleStudent ? (s.room && s.room.startsWith('Room G-') ? s.room : 'Room G-208') : (s.room || 'Room B-304');
 
+    const fName = (s.parents && s.parents.father && s.parents.father.name) || (isFemaleStudent ? 'Mr. Dinesh Patel' : 'Mr. Rajesh Sharma');
+    const fPhone = (s.parents && s.parents.father && s.parents.father.phone) || '+91 98401 23450';
+    const mName = (s.parents && s.parents.mother && s.parents.mother.name) || (isFemaleStudent ? 'Mrs. Geeta Patel' : 'Mrs. Sunita Sharma');
+    const mPhone = (s.parents && s.parents.mother && s.parents.mother.phone) || '+91 98401 33450';
+    const pAddress = (s.parents && s.parents.address) || '142 Heritage Residency, Lakeview Enclave, Chennai';
+
     profileHtml = `
     <!-- Student Details Grid -->
     <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; ${isFemaleStudent ? 'background:#fdf2f8; border-left:4px solid #ec4899;' : ''}">
@@ -7924,12 +7945,12 @@ function openSosDossierModal(alertId){
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
         <div>Name: <b>${s.name}</b></div>
         <div>Registration ID: <b class="mono">${a.studentId||s.id}</b></div>
-        <div>Department: <b>${s.dept}</b></div>
-        <div>Academic: <b>Sem ${s.sem} (Sec ${s.section})</b></div>
+        <div>Department: <b>${s.dept || 'CSE'}</b></div>
+        <div>Academic: <b>Sem ${s.sem||3} (Sec ${s.section||'A'})</b></div>
       </div>
       <div style="margin-top:8px; padding-top:6px; border-top:1px solid var(--line-light); display:flex; justify-content:space-between; align-items:center;">
         <span style="font-size:12.5px;">Student Direct Mobile: <b class="mono" style="color:var(--uni-orange);">${s.phone||a.phone}</b></span>
-        <a href="tel:${(s.phone||a.phone).replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Student</a>
+        <a href="tel:${(s.phone||a.phone||'').replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-accent" style="padding:3px 8px; font-size:11px;">Call Student</a>
       </div>
     </div>
 
@@ -7951,21 +7972,24 @@ function openSosDossierModal(alertId){
     <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:14px; background:#f8fafc;">
       <div style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase; margin-bottom:6px;">Parents / Guardian Emergency Contacts:</div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
-        <div>Father: <b>${s.parents.father.name}</b> (<span class="mono">${s.parents.father.phone}</span>)</div>
-        <a href="tel:${s.parents.father.phone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Father</a>
+        <div>Father: <b>${fName}</b> (<span class="mono">${fPhone}</span>)</div>
+        <a href="tel:${fPhone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Father</a>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; font-size:12.5px;">
-        <div>Mother: <b>${s.parents.mother.name}</b> (<span class="mono">${s.parents.mother.phone}</span>)</div>
-        <a href="tel:${s.parents.mother.phone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Mother</a>
+        <div>Mother: <b>${mName}</b> (<span class="mono">${mPhone}</span>)</div>
+        <a href="tel:${mPhone.replace(/[^0-9+]/g,'')}" class="btn btn-sm btn-ghost" style="padding:2px 8px; font-size:10.5px;">Call Mother</a>
       </div>
       <div style="font-size:11.5px; color:var(--ink-dim); margin-top:4px;">
-        Permanent Address: ${s.parents.address}
+        Permanent Address: ${pAddress}
       </div>
     </div>
     `;
   }
 
-  document.getElementById('sos-dossier-content').innerHTML = `
+  const dossierContent = document.getElementById('sos-dossier-content');
+  if(!dossierContent) return;
+
+  dossierContent.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <h3 style="color:#dc2626; display:flex; align-items:center; gap:8px;">
         Emergency Incident &amp; Contact Dossier
@@ -7987,19 +8011,19 @@ function openSosDossierModal(alertId){
     <!-- Action Buttons -->
     <div class="modal-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeModal('sos-dossier-modal')">Close</button>
-      <button class="btn btn-p" style="background:#2563eb;" onclick="toast('Campus Patrol Team dispatched to ' + '${a.location.replace(/'/g,"\\'")}', 'good')">
+      <button class="btn btn-p" style="background:#2563eb;" onclick="dispatchPatrolGuard('${a.id}')">
         Dispatch Patrol Guard
       </button>
       ${a.status==='Active' ? `
-        <button class="btn btn-p" style="background:var(--good);" onclick="resolveEmergencyAlert('${a.id}'); closeModal('sos-dossier-modal');">
+        <button class="btn btn-p" style="background:var(--good);" onclick="resolveEmergencyAlert('${a.id}')">
           Resolve Emergency
         </button>
         <button class="btn btn-ghost" style="color:var(--danger);" onclick="deleteEmergencyAlert('${a.id}')">
           Delete
         </button>
       ` : `
-        <button class="btn btn-ghost" onclick="reopenEmergencyAlert('${a.id}'); closeModal('sos-dossier-modal');">
-          Reopen
+        <button class="btn btn-ghost" onclick="reopenEmergencyAlert('${a.id}')">
+          Reopen Alert
         </button>
         <button class="btn btn-p" style="background:#ef4444; color:#fff;" onclick="deleteEmergencyAlert('${a.id}')">
           Delete Notification
@@ -8011,34 +8035,42 @@ function openSosDossierModal(alertId){
 }
 
 function resolveEmergencyAlert(alertId){
-  const a = DB.alerts.find(x => x.id === alertId);
+  const a = (DB.alerts || []).find(x => String(x.id) === String(alertId));
   if(a){
     a.status = 'Resolved';
     a.resolvedBy = appState.user ? `${appState.user.name} (${appState.role})` : 'Dean of Operations';
     a.resolvedTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     saveToSupabase();
     toast(`Emergency SOS #${alertId} marked as Resolved ✓`, 'good');
+    const dossierModal = document.getElementById('sos-dossier-modal');
+    if(dossierModal && dossierModal.classList.contains('show')){
+      openSosDossierModal(alertId);
+    }
     renderApp();
   }
 }
 
 function reopenEmergencyAlert(alertId){
-  const a = DB.alerts.find(x => x.id === alertId);
+  const a = (DB.alerts || []).find(x => String(x.id) === String(alertId));
   if(a){
     a.status = 'Active';
     delete a.resolvedBy;
     delete a.resolvedTime;
     saveToSupabase();
     toast(`Emergency SOS #${alertId} reopened as Active`, 'warn');
+    const dossierModal = document.getElementById('sos-dossier-modal');
+    if(dossierModal && dossierModal.classList.contains('show')){
+      openSosDossierModal(alertId);
+    }
     renderApp();
   }
 }
 
 function deleteEmergencyAlert(alertId){
-  const a = (DB.alerts || []).find(x => x.id === alertId);
+  const a = (DB.alerts || []).find(x => String(x.id) === String(alertId));
   if(a){
     if(confirm(`Are you sure you want to permanently delete this ${a.status==='Resolved'?'resolved ':''}Emergency SOS notification for ${a.name}?`)){
-      DB.alerts = (DB.alerts || []).filter(x => x.id !== alertId);
+      DB.alerts = (DB.alerts || []).filter(x => String(x.id) !== String(alertId));
       saveToSupabase();
       closeModal('sos-dossier-modal');
       toast(`Emergency SOS notification removed from system ✓`, 'good');
@@ -8059,6 +8091,21 @@ function clearAllResolvedAlerts(){
     toast(`Purged ${resolvedCount} resolved emergency notifications ✓`, 'good');
     renderApp();
   }
+}
+
+function handleTopbarSosClick(){
+  if(appState.role === 'admin'){
+    const active = (DB.alerts || []).filter(a => a.status === 'Active');
+    if(active.length > 0){
+      openSosDossierModal(active[0].id);
+      toast('Opening active SOS Emergency Dossier', 'info');
+    } else {
+      navigateToPage('aalerts');
+      toast('Opened Emergency SOS Command & Contact Center', 'info');
+    }
+    return;
+  }
+  openSosDispatchModal();
 }
 
 function openSosDispatchModal(){
