@@ -2168,10 +2168,7 @@ function showPublicSection(sec){
                   </div>
                   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
                     <span class="badge b-info">${s.credits || 4} Credits</span>
-                    <div style="display:flex; gap:4px;">
-                      <span class="badge" style="background:#dbeafe; color:#1e40af; font-size:10px; font-weight:700;">Theory: Slot ${s.theorySlot || 'A'}</span>
-                      <span class="badge" style="background:#fef3c7; color:#92400e; font-size:10px; font-weight:700;">Lab: Slot ${s.labSlot || (s.theorySlot?s.theorySlot+'+T'+s.theorySlot:'A+TA')}</span>
-                    </div>
+                    <span class="badge" style="background:#dbeafe; color:#1e40af; font-size:10.5px; font-weight:700;">${s.type || 'Theory & Lab Practical'}</span>
                   </div>
                 </div>
                 <div style="font-size:12px; color:var(--uni-orange); font-weight:700; margin-top:6px;">
@@ -3015,7 +3012,7 @@ const studentViews = {
     ensureTheoryLabAttendance(u);
     const att = overallAtt(u);
     const cgpa = computeCGPA(u);
-    const nextExam = (DB.exams && (DB.exams.find(e => e.status === 'Next in Portal') || DB.exams[0])) || {subject:'Data Structures & Algorithms', subjectCode:'CSE2001', type:'Soft Skill Exam 1 (Mid-Semester)', theorySlot:'Slot A', date:'2026-09-10', room:'Auditorium Hall A'};
+    const nextExam = (DB.exams && (DB.exams.find(e => e.status === 'Next in Portal') || DB.exams[0])) || {subject:'Data Structures & Algorithms', subjectCode:'CSE2001', type:'Soft Skill Exam 1 (Mid-Semester)', date:'2026-09-10', room:'Auditorium Hall A'};
     const teacherMsg = (DB.teacherMessages && DB.teacherMessages[0]) || {teacherName:'Dr. Ananya Rao', subject:'Data Structures & Algorithms', title:'Lab Extension', message:'Lab Report 4 extended to Friday 5 PM.', time:'Today, 10:30 AM'};
     const adminDir = (DB.adminDirectives && DB.adminDirectives[0]) || {title:'Library 24x7 Open', directive:'Central Library open 24x7 for exams.', author:'Dean of Operations', time:'Active'};
     const myParentMsgs = (DB.parentMessages || []).filter(m => m.studentId === u.id || m.studentId === 'all');
