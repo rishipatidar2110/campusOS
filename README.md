@@ -179,6 +179,9 @@ CampusOS provides a mission-critical campus safety infrastructure designed for r
    - **Male Student Alerts**: Displays **`Men's Residential Hostel (B-Block)`**, Room Number, Student Mobile, and Father/Mother emergency contacts.
 4. **Patrol Guard Dispatch & Resolution**:
    - 1-click campus security patrol team dispatch and administrative resolution logging.
+5. **Emergency Notification Deletion & Log Management**:
+   - Administrators can delete individual resolved emergency notifications, reopen alerts if necessary, or 1-click purge all resolved SOS notifications from the system.
+   - Comprehensive category filtering (`All Emergency Alerts`, `🚨 Active Alarms`, `✅ Resolved Log`).
 
 ---
 

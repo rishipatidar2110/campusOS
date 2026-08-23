@@ -945,7 +945,7 @@ function ic(name, cls='svg-ic'){
         <span id="topbar-cloud-text" style="color:var(--ink);">Supabase Synced</span>
       </button>
 
-      <button class="sos-trigger-btn" onclick="openModal('sos-modal')">
+      <button class="sos-trigger-btn" onclick="openSosDispatchModal()">
         <svg class="svg-ic-sm" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         SOS
       </button>
@@ -970,6 +970,9 @@ function ic(name, cls='svg-ic'){
     <p style="font-size:12px; color:var(--ink-dim); margin-bottom:12px;">
       Instant alert dispatches to university security and dean's command desk with your live location, student mobile, parents' emergency contacts, and hostel room number.
     </p>
+
+    <!-- Dynamic User Identity Confirmation Block -->
+    <div id="sos-user-identity-box"></div>
 
     <!-- Location Entry -->
     <div class="form-row">
@@ -1205,9 +1208,60 @@ async function uploadSeedToSupabase(){
   } catch(e){}
 }
 
+function normalizeAlert(a){
+  if(!a) return a;
+  if(a.role === 'employee' || a.employeeId){
+    const t = (DB.teachers || []).find(tch => tch.id === a.employeeId || tch.name === a.name.replace(/^(Dr\.|Prof\.)\s*/,''));
+    if(t){
+      a.role = 'employee';
+      a.employeeId = t.id;
+      a.name = `${t.title || 'Dr.'} ${t.name}`;
+      a.cabin = t.cabin || 'Technology Tower (TT)';
+      a.room = t.room || 'Room TT-210';
+      a.dept = t.dept || 'Computer Science & Engineering';
+      a.subject = t.subject || 'Data Structures & Algorithms';
+      a.phone = t.phone || '+91 98401 90101';
+      a.landmark = t.landmark || 'Adjacent to VLSI CAD Synthesis Lab 3, nearest to Elevator B';
+    }
+  } else {
+    // If student
+    const s = (DB.students || []).find(st => st.id === a.studentId || st.name.toLowerCase() === a.name.toLowerCase());
+    const isFem = (s && s.gender === 'female') || a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name);
+    a.role = 'student';
+    a.gender = isFem ? 'female' : 'male';
+    if(s){
+      a.studentId = s.id;
+      a.name = s.name;
+      a.dept = s.dept;
+      a.sem = s.sem;
+      a.section = s.section;
+      a.hostel = s.hostel;
+      a.room = s.room;
+      a.phone = s.phone;
+      a.parents = s.parents;
+    } else {
+      if(isFem){
+        a.hostel = "Women's Residential Hostel (G-Block)";
+        a.room = (a.room && a.room.startsWith('Room G-')) ? a.room : 'Room G-208';
+      } else {
+        a.hostel = "Men's Residential Hostel (B-Block)";
+        a.room = (a.room && a.room.startsWith('Room B-')) ? a.room : 'Room B-304';
+      }
+    }
+  }
+  return a;
+}
+
+function normalizeAllAlerts(){
+  if(DB.alerts && Array.isArray(DB.alerts)){
+    DB.alerts.forEach(normalizeAlert);
+  }
+}
+
 const LOCAL_STORAGE_KEY = 'campusos-db-fox-v3';
 function saveLocalCache(){
   try {
+    normalizeAllAlerts();
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(DB));
     localStorage.setItem('campusos-future-att-fox', JSON.stringify(futureAttendanceChoices));
   } catch(e){}
@@ -1221,6 +1275,7 @@ function restoreLocalCache(){
     }
   } catch(e){}
   ensurePlacementDrivesIds();
+  normalizeAllAlerts();
 }
 
 function openSupabaseConfigModal(){
@@ -5596,7 +5651,7 @@ async function askAIMentor(preset){
       ans = `🚨 ACTIVE SOS EMERGENCY ALERTS (${activeAlerts.length} Active Urgent Cases):\n\n` +
         activeAlerts.map((a, idx) => {
           const isFac = a.role === 'employee' || !!a.employeeId;
-          const isFem = !isFac && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+          const isFem = !isFac && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
           return `[Alert #${idx+1} · ID: ${a.id}] — Priority: IMMEDIATE ACTION REQUIRED\n` +
             `• Initiator: ${a.name} (${isFac ? 'Faculty Staff · ' + (a.employeeId||'EMP101') : (isFem ? 'Female Student · ' : 'Male Student · ') + (a.studentId||'')})\n` +
             `• Emergency Category: ${a.emergencyNature || 'Emergency Assistance'}\n` +
@@ -6438,7 +6493,7 @@ const adminViews = {
 
     <!-- Quick SOS Monitoring Overview -->
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <b style="font-size:15px; color:var(--uni-navy);">Live Emergency SOS Stream</b>
         <button class="btn btn-sm btn-ghost" onclick="navigateToPage('aalerts')">View Full SOS Monitor</button>
       </div>
@@ -6447,8 +6502,9 @@ const adminViews = {
           <thead><tr><th>Initiator</th><th>Role / ID</th><th>Incident Location</th><th>Hostel / Cabin Workstation</th><th>Direct Mobile</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             ${DB.alerts.slice(0,5).map(a => {
+              normalizeAlert(a);
               const isFaculty = a.role === 'employee' || !!a.employeeId;
-              const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+              const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
               return `
               <tr>
                 <td>
@@ -6457,10 +6513,10 @@ const adminViews = {
                 </td>
                 <td>
                   ${isFaculty ? `
-                    <span class="badge" style="background:#0284c7; color:#fff; font-weight:700;">Faculty</span>
+                    <span class="badge" style="background:#0284c7; color:#fff; font-weight:700;">Faculty Staff</span>
                     <div class="mono" style="font-size:10.5px; color:var(--ink-dim); margin-top:2px;">${a.employeeId || 'EMP101'}</div>
                   ` : (isFemale ? `
-                    <span class="badge" style="background:#fce7f3; color:#be185d; font-weight:700;">Female Student</span>
+                    <span class="badge" style="background:#fce7f3; color:#be185d; font-weight:800;">Female Student</span>
                     <div class="mono" style="font-size:10.5px; color:var(--ink-dim); margin-top:2px;">${a.studentId || '25bce1002'}</div>
                   ` : `
                     <span class="badge b-info">Male Student</span>
@@ -6483,8 +6539,14 @@ const adminViews = {
                 <td class="mono"><b>${a.phone || '+91 98401 10011'}</b></td>
                 <td><span class="badge ${a.status==='Active'?'b-bad':'b-good'}">${a.status}</span></td>
                 <td>
-                  <button class="btn btn-sm btn-p" style="background:#dc2626;" onclick="openSosDossierModal('${a.id}')">Dossier</button>
-                  ${a.status==='Active'?`<button class="btn btn-sm btn-ghost" onclick="resolveEmergencyAlert('${a.id}')">Resolve</button>`:''}
+                  <div style="display:flex; gap:5px; align-items:center;">
+                    <button class="btn btn-sm btn-p" style="background:#dc2626; padding:3px 7px; font-size:10.5px;" onclick="openSosDossierModal('${a.id}')">Dossier</button>
+                    ${a.status==='Active' ? `
+                      <button class="btn btn-sm btn-ghost" style="padding:3px 7px; font-size:10.5px;" onclick="resolveEmergencyAlert('${a.id}')">Resolve</button>
+                    ` : `
+                      <button class="btn btn-sm btn-ghost" style="color:var(--danger); padding:3px 7px; font-size:10.5px;" onclick="deleteEmergencyAlert('${a.id}')" title="Delete Resolved Alert Notification">Delete</button>
+                    `}
+                  </div>
                 </td>
               </tr>`;
             }).join('')}
@@ -6495,18 +6557,38 @@ const adminViews = {
   },
 
   aalerts(){
+    const all = DB.alerts || [];
+    all.forEach(normalizeAlert);
+    const activeCount = all.filter(a => a.status === 'Active').length;
+    const resolvedCount = all.filter(a => a.status === 'Resolved').length;
+
+    const list = adminAlertsFilter === 'active' ? all.filter(a => a.status === 'Active') :
+                 adminAlertsFilter === 'resolved' ? all.filter(a => a.status === 'Resolved') : all;
+
     return `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
       <div>
         <b style="font-size:16px; color:var(--uni-navy);">Emergency SOS Command &amp; Contact Dossier Center</b>
-        <div style="font-size:12px; color:var(--ink-dim);">Real-time GPS incident locations, faculty workplace cabins, student &amp; female hostel records, and emergency contacts.</div>
+        <div style="font-size:12px; color:var(--ink-dim);">Real-time GPS incident locations, faculty workplace cabins, student &amp; female hostel records, emergency contacts, and notification management.</div>
       </div>
+      ${resolvedCount > 0 ? `
+        <button class="btn btn-sm btn-ghost" style="color:var(--danger); border-color:#fecaca;" onclick="clearAllResolvedAlerts()">
+          🗑️ Clear All Resolved Notifications (${resolvedCount})
+        </button>
+      ` : ''}
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="tabbar" style="margin-bottom:14px;">
+      <button class="${adminAlertsFilter==='all'?'active':''}" onclick="setAdminAlertsFilter('all')">All Emergency Alerts (${all.length})</button>
+      <button class="${adminAlertsFilter==='active'?'active':''}" onclick="setAdminAlertsFilter('active')">🚨 Active Alarms (${activeCount})</button>
+      <button class="${adminAlertsFilter==='resolved'?'active':''}" onclick="setAdminAlertsFilter('resolved')">✅ Resolved Log (${resolvedCount})</button>
     </div>
 
     <div class="grid g1" style="display:flex; flex-direction:column; gap:12px;">
-      ${DB.alerts.length > 0 ? DB.alerts.map(a => {
+      ${list.length > 0 ? list.map(a => {
         const isFaculty = a.role === 'employee' || !!a.employeeId;
-        const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+        const isFemale = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
 
         return `
         <div class="card" style="border-left:5px solid ${a.status==='Active'?'#ef4444':'var(--good)'};">
@@ -6547,7 +6629,7 @@ const adminViews = {
               ${a.resolvedBy ? `<div style="font-size:11px; color:var(--good); font-weight:700; margin-top:4px;">Resolved by ${a.resolvedBy} at ${a.resolvedTime}</div>` : ''}
             </div>
 
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
               <button class="btn btn-sm btn-p" style="background:#dc2626;" onclick="openSosDossierModal('${a.id}')">
                 View Full Dossier
               </button>
@@ -6555,15 +6637,25 @@ const adminViews = {
                 <button class="btn btn-sm btn-ghost" onclick="resolveEmergencyAlert('${a.id}')">
                   Mark Resolved
                 </button>
-              ` : ''}
+                <button class="btn btn-sm btn-ghost" style="color:var(--danger);" onclick="deleteEmergencyAlert('${a.id}')" title="Delete Alert">
+                  Delete
+                </button>
+              ` : `
+                <button class="btn btn-sm btn-ghost" onclick="reopenEmergencyAlert('${a.id}')">
+                  Reopen
+                </button>
+                <button class="btn btn-sm btn-p" style="background:#ef4444; color:#fff;" onclick="deleteEmergencyAlert('${a.id}')" title="Delete Resolved Alert Notification">
+                  Delete Notification
+                </button>
+              `}
             </div>
           </div>
         </div>`;
       }).join('') : `
         <div class="card" style="text-align:center; padding:32px; color:var(--ink-dim);">
           <svg class="svg-ic-lg" viewBox="0 0 24 24" style="stroke:var(--good); margin-bottom:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <div style="font-size:14px; font-weight:700; color:var(--uni-navy);">No Active Emergency Alerts</div>
-          <div style="font-size:12px; margin-top:4px;">Campus security status is green and fully normal.</div>
+          <div style="font-size:14px; font-weight:700; color:var(--uni-navy);">No Emergency Alerts in this category</div>
+          <div style="font-size:12px; margin-top:4px;">Campus emergency logs are clean.</div>
         </div>
       `}
     </div>`;
@@ -7751,12 +7843,19 @@ function removeCourse(courseKey){
   }
 }
 
+let adminAlertsFilter = 'all';
+function setAdminAlertsFilter(f){
+  adminAlertsFilter = f;
+  renderCurrentPage();
+}
+
 function openSosDossierModal(alertId){
   const a = DB.alerts.find(x => x.id === alertId);
   if(!a) return;
+  normalizeAlert(a);
 
   const isFaculty = a.role === 'employee' || !!a.employeeId;
-  const isFemaleStudent = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')));
+  const isFemaleStudent = !isFaculty && (a.gender === 'female' || (a.hostel && a.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(a.name));
 
   let profileHtml = '';
   if(isFaculty){
@@ -7801,26 +7900,26 @@ function openSosDossierModal(alertId){
     </div>
     `;
   } else {
-    const s = DB.students.find(st => st.id === a.studentId) || {
+    const s = DB.students.find(st => st.id === a.studentId || st.name.toLowerCase() === a.name.toLowerCase()) || {
       name: a.name, phone: a.phone || '+91 98401 10011',
       dept: a.dept || 'Computer Science & Engineering', sem: a.sem || 3, section: a.section || 'A',
-      hostel: a.hostel || (isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)"),
-      room: a.room || (isFemaleStudent ? "Room G-208" : "Room B-304"),
+      hostel: isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)",
+      room: isFemaleStudent ? "Room G-208" : "Room B-304",
       parents: a.parents || {
-        father:{name:'Mr. Rajesh Sharma', phone:'+91 98401 23450'},
-        mother:{name:'Mrs. Sunita Sharma', phone:'+91 98401 33450'},
-        address:'142 Heritage Residency, Lakeview Enclave, Chennai'
+        father:{name: isFemaleStudent ? 'Mr. Dinesh Patel' : 'Mr. Rajesh Sharma', phone:'+91 98401 23450'},
+        mother:{name: isFemaleStudent ? 'Mrs. Geeta Patel' : 'Mrs. Sunita Sharma', phone:'+91 98401 33450'},
+        address:'88 Palm Meadows, SG Highway, Ahmedabad'
       }
     };
-    const hostelDisplay = a.hostel || s.hostel || (isFemaleStudent ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)");
-    const roomDisplay = a.room || s.room || (isFemaleStudent ? "Room G-208" : "Room B-304");
+    const hostelDisplay = isFemaleStudent ? "Women's Residential Hostel (G-Block)" : (s.hostel || "Men's Residential Hostel (B-Block)");
+    const roomDisplay = isFemaleStudent ? (s.room && s.room.startsWith('Room G-') ? s.room : 'Room G-208') : (s.room || 'Room B-304');
 
     profileHtml = `
     <!-- Student Details Grid -->
     <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; ${isFemaleStudent ? 'background:#fdf2f8; border-left:4px solid #ec4899;' : ''}">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Student Information:</span>
-        ${isFemaleStudent ? `<span class="badge" style="background:#fce7f3; color:#be185d; font-weight:700; font-size:10px;">Female Student</span>` : `<span class="badge b-info" style="font-size:10px;">Student</span>`}
+        ${isFemaleStudent ? `<span class="badge" style="background:#fce7f3; color:#be185d; font-weight:800; font-size:10.5px;">Female Student</span>` : `<span class="badge b-info" style="font-size:10px;">Male Student</span>`}
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12.5px;">
         <div>Name: <b>${s.name}</b></div>
@@ -7838,7 +7937,7 @@ function openSosDossierModal(alertId){
     <div style="border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px; ${isFemaleStudent ? 'background:#fff5f7; border-color:#fbcfe8;' : ''}">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span style="font-size:11px; font-weight:700; color:var(--ink-dim); text-transform:uppercase;">Campus Residential Hostel &amp; Room:</span>
-        ${isFemaleStudent ? `<span class="badge" style="background:#fbcfe8; color:#9d174d; font-weight:800; font-size:10.5px;">Women's Hostel Facility</span>` : ''}
+        ${isFemaleStudent ? `<span class="badge" style="background:#fbcfe8; color:#9d174d; font-weight:800; font-size:10.5px;">Women's Hostel Facility</span>` : `<span class="badge b-info" style="font-size:10px;">Men's Hostel Facility</span>`}
       </div>
       <div style="font-size:12.5px;">
         Hostel Residence: <b style="color:${isFemaleStudent ? '#be185d' : 'var(--uni-navy)'};">${hostelDisplay}</b>
@@ -7886,7 +7985,7 @@ function openSosDossierModal(alertId){
     ${profileHtml}
 
     <!-- Action Buttons -->
-    <div class="modal-actions">
+    <div class="modal-actions" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="closeModal('sos-dossier-modal')">Close</button>
       <button class="btn btn-p" style="background:#2563eb;" onclick="toast('Campus Patrol Team dispatched to ' + '${a.location.replace(/'/g,"\\'")}', 'good')">
         Dispatch Patrol Guard
@@ -7895,7 +7994,17 @@ function openSosDossierModal(alertId){
         <button class="btn btn-p" style="background:var(--good);" onclick="resolveEmergencyAlert('${a.id}'); closeModal('sos-dossier-modal');">
           Resolve Emergency
         </button>
-      ` : ''}
+        <button class="btn btn-ghost" style="color:var(--danger);" onclick="deleteEmergencyAlert('${a.id}')">
+          Delete
+        </button>
+      ` : `
+        <button class="btn btn-ghost" onclick="reopenEmergencyAlert('${a.id}'); closeModal('sos-dossier-modal');">
+          Reopen
+        </button>
+        <button class="btn btn-p" style="background:#ef4444; color:#fff;" onclick="deleteEmergencyAlert('${a.id}')">
+          Delete Notification
+        </button>
+      `}
     </div>
   `;
   openModal('sos-dossier-modal');
@@ -7908,9 +8017,108 @@ function resolveEmergencyAlert(alertId){
     a.resolvedBy = appState.user ? `${appState.user.name} (${appState.role})` : 'Dean of Operations';
     a.resolvedTime = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     saveToSupabase();
-    toast(`Emergency SOS #${alertId} marked as Resolved`, 'good');
-    renderCurrentPage();
+    toast(`Emergency SOS #${alertId} marked as Resolved ✓`, 'good');
+    renderApp();
   }
+}
+
+function reopenEmergencyAlert(alertId){
+  const a = DB.alerts.find(x => x.id === alertId);
+  if(a){
+    a.status = 'Active';
+    delete a.resolvedBy;
+    delete a.resolvedTime;
+    saveToSupabase();
+    toast(`Emergency SOS #${alertId} reopened as Active`, 'warn');
+    renderApp();
+  }
+}
+
+function deleteEmergencyAlert(alertId){
+  const a = (DB.alerts || []).find(x => x.id === alertId);
+  if(a){
+    if(confirm(`Are you sure you want to permanently delete this ${a.status==='Resolved'?'resolved ':''}Emergency SOS notification for ${a.name}?`)){
+      DB.alerts = (DB.alerts || []).filter(x => x.id !== alertId);
+      saveToSupabase();
+      closeModal('sos-dossier-modal');
+      toast(`Emergency SOS notification removed from system ✓`, 'good');
+      renderApp();
+    }
+  }
+}
+
+function clearAllResolvedAlerts(){
+  const resolvedCount = (DB.alerts || []).filter(a => a.status === 'Resolved').length;
+  if(resolvedCount === 0){
+    toast('No resolved alerts to clear.', 'info');
+    return;
+  }
+  if(confirm(`Are you sure you want to delete all ${resolvedCount} resolved Emergency SOS notifications?`)){
+    DB.alerts = (DB.alerts || []).filter(a => a.status === 'Active');
+    saveToSupabase();
+    toast(`Purged ${resolvedCount} resolved emergency notifications ✓`, 'good');
+    renderApp();
+  }
+}
+
+function openSosDispatchModal(){
+  const role = appState.role || 'student';
+  const u = appState.user || (role === 'employee' ? DB.teachers[0] : DB.students[0]);
+  const isFac = role === 'employee' || !!u.employeeId;
+  const isFem = !isFac && (u.gender === 'female' || (u.hostel && u.hostel.toLowerCase().includes('women')) || /diya|ishita|sanya|ananya|priya/i.test(u.name));
+  
+  const idBox = document.getElementById('sos-user-identity-box');
+  if(idBox){
+    if(isFac){
+      idBox.innerHTML = `
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-left:4px solid #0284c7; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:var(--uni-navy); font-size:13px;">${u.title || 'Dr.'} ${u.name}</b>
+            <span class="badge" style="background:#0284c7; color:#fff; font-size:10px; font-weight:700;">Faculty Staff</span>
+          </div>
+          <div style="color:var(--ink-dim); margin-top:3px;">
+            Official Cabin: <b>${u.cabin || 'Technology Tower (TT)'}</b> (${u.room || 'Room TT-210'}) · Emp ID: <span class="mono">${u.id || 'EMP101'}</span>
+          </div>
+        </div>`;
+    } else if(isFem){
+      idBox.innerHTML = `
+        <div style="background:#fdf2f8; border:1px solid #fbcfe8; border-left:4px solid #ec4899; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:var(--uni-navy); font-size:13px;">${u.name}</b>
+            <span class="badge" style="background:#fce7f3; color:#be185d; font-weight:800; font-size:10px;">Female Student</span>
+          </div>
+          <div style="color:var(--ink-dim); margin-top:3px;">
+            Hostel: <b style="color:#be185d;">Women's Residential Hostel (G-Block)</b> (${u.room || 'Room G-208'}) · Reg ID: <span class="mono">${u.id || '25bce1002'}</span>
+          </div>
+        </div>`;
+    } else {
+      idBox.innerHTML = `
+        <div style="background:#f0f9ff; border:1px solid #bae6fd; border-left:4px solid #0284c7; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="color:var(--uni-navy); font-size:13px;">${u.name}</b>
+            <span class="badge b-info" style="font-size:10px; font-weight:700;">Male Student</span>
+          </div>
+          <div style="color:var(--ink-dim); margin-top:3px;">
+            Hostel: <b style="color:var(--uni-navy);">Men's Residential Hostel (B-Block)</b> (${u.room || 'Room B-304'}) · Reg ID: <span class="mono">${u.id || '25bce1001'}</span>
+          </div>
+        </div>`;
+    }
+  }
+
+  // Preselect correct location
+  const locSel = document.getElementById('sos-loc-select');
+  if(locSel){
+    if(isFem){
+      locSel.value = "Women's Residential Hostel (G-Block)";
+    } else if(!isFac){
+      locSel.value = "Men's Residential Hostel (B-Block)";
+    } else {
+      locSel.value = "Technology Tower (VLSI Labs, 2nd Floor)";
+    }
+  }
+  toggleSosCustomLoc(locSel ? locSel.value : '');
+  cancelSosHold();
+  openModal('sos-modal');
 }
 
 function openAdminDirectiveModal(){
@@ -7940,7 +8148,7 @@ function safetyView(){
     <div class="card" style="background:#ef4444; color:#fff;">
       <b style="font-size:16px;">Emergency SOS Alert</b>
       <p style="font-size:12.5px; opacity:.9; margin-top:6px;">Instantly dispatches security personnel to your live GPS coordinates.</p>
-      <button class="btn" style="background:#fff; color:#ef4444; margin-top:14px;" onclick="openModal('sos-modal')">Trigger SOS Now</button>
+      <button class="btn" style="background:#fff; color:#ef4444; margin-top:14px;" onclick="openSosDispatchModal()">Trigger SOS Now</button>
     </div>
     <div class="card">
       <b style="font-size:16px; color:var(--uni-navy);">Confidential Incident Report</b>
@@ -8969,19 +9177,20 @@ function completeSosDispatch(){
   const u = appState.user || (role === 'employee' ? DB.teachers[0] : DB.students[0]);
 
   let alertObj;
-  if(role === 'employee'){
+  if(role === 'employee' || u.role === 'employee' || u.employeeId){
+    const t = (DB.teachers || []).find(tch => tch.id === u.id || tch.name === u.name.replace(/^(Dr\.|Prof\.)\s*/,'')) || u;
     alertObj = {
       id: cid(),
       type: 'Priority SOS',
       role: 'employee',
-      employeeId: u.id || 'EMP101',
-      name: (u.title ? u.title + ' ' : '') + u.name,
-      phone: u.phone || '+91 98401 90101 (Ext: 2101)',
-      dept: u.dept || 'Computer Science & Engineering',
-      subject: u.subject || 'Data Structures & Algorithms',
-      cabin: u.cabin || 'Technology Tower (TT)',
-      room: u.room || 'Room TT-210',
-      landmark: u.landmark || 'Adjacent to VLSI CAD Synthesis Lab 3, nearest to Elevator B',
+      employeeId: t.id || 'EMP101',
+      name: `${t.title || 'Dr.'} ${t.name}`,
+      phone: t.phone || '+91 98401 90101 (Ext: 2101)',
+      dept: t.dept || 'Computer Science & Engineering',
+      subject: t.subject || 'Data Structures & Algorithms',
+      cabin: t.cabin || 'Technology Tower (TT)',
+      room: t.room || 'Room TT-210',
+      landmark: t.landmark || 'Adjacent to VLSI CAD Synthesis Lab 3, nearest to Elevator B',
       emergencyNature: nature,
       location: loc,
       time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
@@ -8989,26 +9198,30 @@ function completeSosDispatch(){
       status: 'Active'
     };
   } else {
-    const studentIdx = DB.students.findIndex(st => st.id === u.id);
-    const gender = u.gender || (studentIdx >= 0 ? STUDENT_GENDERS[studentIdx] : 'male');
-    const isFemale = gender === 'female' || (u.hostel && u.hostel.toLowerCase().includes('women'));
-    const defaultHostel = isFemale ? "Women's Residential Hostel (G-Block)" : "Men's Residential Hostel (B-Block)";
-    const defaultRoom = isFemale ? "Room G-208" : "Room B-304";
+    // Student resolution
+    const studentIdx = DB.students.findIndex(st => st.id === u.id || st.name.toLowerCase() === u.name.toLowerCase());
+    const matchedStu = studentIdx >= 0 ? DB.students[studentIdx] : null;
+    const gender = (matchedStu && matchedStu.gender) || u.gender || (studentIdx >= 0 ? STUDENT_GENDERS[studentIdx] : (/diya|ishita|sanya|ananya|priya/i.test(u.name) ? 'female' : 'male'));
+    const isFemale = gender === 'female' || (u.hostel && u.hostel.toLowerCase().includes('women')) || (/diya|ishita|sanya|ananya|priya/i.test(u.name));
+    
+    const properHostel = isFemale ? "Women's Residential Hostel (G-Block)" : (matchedStu && matchedStu.hostel ? matchedStu.hostel : (u.hostel || "Men's Residential Hostel (B-Block)"));
+    const properRoom = isFemale ? (matchedStu && matchedStu.room && matchedStu.room.startsWith('Room G-') ? matchedStu.room : 'Room G-208') : (matchedStu ? matchedStu.room : (u.room || 'Room B-304'));
+    const parentsInfo = matchedStu ? matchedStu.parents : (u.parents || DB.students[0].parents);
 
     alertObj = {
       id: cid(),
       type: 'Priority SOS',
       role: 'student',
-      studentId: u.id || '25bce1001',
-      name: u.name,
+      studentId: u.id || (matchedStu ? matchedStu.id : (isFemale ? '25bce1002' : '25bce1001')),
+      name: matchedStu ? matchedStu.name : u.name,
       gender: isFemale ? 'female' : 'male',
-      phone: u.phone || '+91 98401 10011',
-      dept: u.dept || 'Computer Science & Engineering',
-      sem: u.sem || 3,
-      section: u.section || 'A',
-      hostel: u.hostel || defaultHostel,
-      room: u.room || defaultRoom,
-      parents: u.parents || DB.students[0].parents,
+      phone: u.phone || (matchedStu ? matchedStu.phone : '+91 98401 10011'),
+      dept: u.dept || (matchedStu ? matchedStu.dept : 'Computer Science & Engineering'),
+      sem: u.sem || (matchedStu ? matchedStu.sem : 3),
+      section: u.section || (matchedStu ? matchedStu.section : 'A'),
+      hostel: properHostel,
+      room: properRoom,
+      parents: parentsInfo,
       emergencyNature: nature,
       location: loc,
       time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
@@ -9017,6 +9230,7 @@ function completeSosDispatch(){
     };
   }
 
+  normalizeAlert(alertObj);
   DB.alerts = DB.alerts || [];
   DB.alerts.unshift(alertObj);
   saveToSupabase();
